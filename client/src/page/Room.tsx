@@ -12,7 +12,6 @@ import {
   ColorInput,
   CopyButton,
   Divider,
-  FileButton,
   Group,
   Popover,
   ScrollArea,
@@ -75,7 +74,6 @@ export default function Room() {
 
   const objectLayerRef = useRef<ObjectLayerHandle | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const resetRef = useRef<() => void>(null);
 
   const [latexModalOpened, { open: latexModalOpen, close: latexModalClose }] =
     useDisclosure(false);
@@ -305,24 +303,26 @@ export default function Room() {
                   <IconEraser />
                 </ActionIcon>
               </Tooltip>
-              <FileButton
-                accept="image/*"
-                resetRef={resetRef}
-                onChange={(file) => {
-                  if (file) {
-                    objectLayerRef.current?.addImage(file);
-                    resetRef.current?.();
-                  }
-                }}
-              >
-                {(props) => (
-                  <Tooltip label="Insert image" openDelay={300}>
-                    <ActionIcon variant="default" {...props}>
-                      <IconPhotoPlus />
-                    </ActionIcon>
-                  </Tooltip>
-                )}
-              </FileButton>
+            </ActionIcon.Group>
+            <ActionIcon.Group>
+              <Tooltip label="Insert image" openDelay={300}>
+                <ActionIcon component="label" variant="default">
+                  <IconPhotoPlus />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0];
+                      if (!file) {
+                        return;
+                      }
+                      objectLayerRef.current?.addImage(file);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </ActionIcon>
+              </Tooltip>
               <Tooltip label="Insert equation" openDelay={300}>
                 <ActionIcon
                   variant="default"
