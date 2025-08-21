@@ -261,7 +261,7 @@ export default function Room() {
               >
                 <ActionIcon
                   color={copied ? "teal" : "gray"}
-                  variant="subtle"
+                  variant="default"
                   onClick={copy}
                 >
                   {copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
@@ -277,63 +277,65 @@ export default function Room() {
       <Box bd="1px solid #eee" bdrs={8} p={8} bg="#fafafa">
         <ScrollArea type="auto" scrollHideDelay={0}>
           <Group gap="xs" wrap="nowrap">
-            <Tooltip label="Select" openDelay={300}>
-              <ActionIcon
-                variant={tool === "select" ? "filled" : "subtle"}
-                onClick={() => setTool("select")}
-                aria-pressed={tool === "select"}
-              >
-                <IconPointer />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Pen" openDelay={300}>
-              <ActionIcon
-                variant={tool === "pen" ? "filled" : "subtle"}
-                onClick={() => setTool("pen")}
-                aria-pressed={tool === "pen"}
-              >
-                <IconPencil />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Eraser" openDelay={300}>
-              <ActionIcon
-                variant={tool === "eraser" ? "filled" : "subtle"}
-                onClick={() => setTool("eraser")}
-                aria-pressed={tool === "eraser"}
-              >
-                <IconEraser />
-              </ActionIcon>
-            </Tooltip>
-            <FileButton
-              accept="image/*"
-              resetRef={resetRef}
-              onChange={(file) => {
-                if (file) {
-                  objectLayerRef.current?.addImage(file);
-                  resetRef.current?.();
-                }
-              }}
-            >
-              {(props) => (
-                <Tooltip label="Insert image" openDelay={300}>
-                  <ActionIcon variant="subtle" {...props}>
-                    <IconPhotoPlus />
-                  </ActionIcon>
-                </Tooltip>
-              )}
-            </FileButton>
-            <Tooltip label="Insert equation" openDelay={300}>
-              <ActionIcon
-                variant="subtle"
-                onClick={() => {
-                  setEditingLatexId(null);
-                  setLatexInitial("");
-                  latexModalOpen();
+            <ActionIcon.Group>
+              <Tooltip label="Select" openDelay={300}>
+                <ActionIcon
+                  variant={tool === "select" ? "filled" : "default"}
+                  onClick={() => setTool("select")}
+                  aria-pressed={tool === "select"}
+                >
+                  <IconPointer />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Pen" openDelay={300}>
+                <ActionIcon
+                  variant={tool === "pen" ? "filled" : "default"}
+                  onClick={() => setTool("pen")}
+                  aria-pressed={tool === "pen"}
+                >
+                  <IconPencil />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Eraser" openDelay={300}>
+                <ActionIcon
+                  variant={tool === "eraser" ? "filled" : "default"}
+                  onClick={() => setTool("eraser")}
+                  aria-pressed={tool === "eraser"}
+                >
+                  <IconEraser />
+                </ActionIcon>
+              </Tooltip>
+              <FileButton
+                accept="image/*"
+                resetRef={resetRef}
+                onChange={(file) => {
+                  if (file) {
+                    objectLayerRef.current?.addImage(file);
+                    resetRef.current?.();
+                  }
                 }}
               >
-                <IconMathFunction />
-              </ActionIcon>
-            </Tooltip>
+                {(props) => (
+                  <Tooltip label="Insert image" openDelay={300}>
+                    <ActionIcon variant="default" {...props}>
+                      <IconPhotoPlus />
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+              </FileButton>
+              <Tooltip label="Insert equation" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  onClick={() => {
+                    setEditingLatexId(null);
+                    setLatexInitial("");
+                    latexModalOpen();
+                  }}
+                >
+                  <IconMathFunction />
+                </ActionIcon>
+              </Tooltip>
+            </ActionIcon.Group>
             <Divider orientation="vertical" />
             <Tooltip label="Pen color" openDelay={300}>
               <ColorInput
@@ -363,7 +365,7 @@ export default function Room() {
             <Popover withArrow trapFocus>
               <Popover.Target>
                 <Tooltip label="Line width" openDelay={300}>
-                  <ActionIcon variant="subtle">
+                  <ActionIcon variant="default">
                     <IconRulerMeasure />
                   </ActionIcon>
                 </Tooltip>
@@ -381,68 +383,72 @@ export default function Room() {
                 </Stack>
               </Popover.Dropdown>
             </Popover>
-            <Tooltip label="Bring forward" openDelay={300}>
-              <ActionIcon
-                variant="subtle"
-                disabled={!selectedId}
-                onClick={() => objectLayerRef.current?.bringForward()}
-              >
-                <IconArrowUp />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Send backward" openDelay={300}>
-              <ActionIcon
-                variant="subtle"
-                disabled={!selectedId}
-                onClick={() => objectLayerRef.current?.sendBackward()}
-              >
-                <IconArrowDown />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Bring to front" openDelay={300}>
-              <ActionIcon
-                variant="subtle"
-                disabled={!selectedId}
-                onClick={() => objectLayerRef.current?.bringToFront()}
-              >
-                <IconArrowBarToUp />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Send to back" openDelay={300}>
-              <ActionIcon
-                variant="subtle"
-                disabled={!selectedId}
-                onClick={() => objectLayerRef.current?.sendToBack()}
-              >
-                <IconArrowBarToDown />
-              </ActionIcon>
-            </Tooltip>
+            <ActionIcon.Group>
+              <Tooltip label="Bring forward" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!selectedId}
+                  onClick={() => objectLayerRef.current?.bringForward()}
+                >
+                  <IconArrowUp />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Send backward" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!selectedId}
+                  onClick={() => objectLayerRef.current?.sendBackward()}
+                >
+                  <IconArrowDown />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Bring to front" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!selectedId}
+                  onClick={() => objectLayerRef.current?.bringToFront()}
+                >
+                  <IconArrowBarToUp />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Send to back" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!selectedId}
+                  onClick={() => objectLayerRef.current?.sendToBack()}
+                >
+                  <IconArrowBarToDown />
+                </ActionIcon>
+              </Tooltip>
+            </ActionIcon.Group>
             <Divider orientation="vertical" />
-            <Tooltip label="Delete object" openDelay={300}>
-              <ActionIcon
-                variant="subtle"
-                disabled={!selectedId}
-                onClick={() => objectLayerRef.current?.deleteSelected()}
-              >
-                <IconTrashX />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Delete all drawings" openDelay={300}>
-              <ActionIcon
-                variant="subtle"
-                onClick={() => wsRef.current.sendClearDrawings()}
-              >
-                <IconPencilX />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Delete all objects" openDelay={300}>
-              <ActionIcon
-                variant="subtle"
-                onClick={() => objectLayerRef.current?.deleteAll()}
-              >
-                <IconInputX />
-              </ActionIcon>
-            </Tooltip>
+            <ActionIcon.Group>
+              <Tooltip label="Delete object" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!selectedId}
+                  onClick={() => objectLayerRef.current?.deleteSelected()}
+                >
+                  <IconTrashX />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Delete all drawings" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  onClick={() => wsRef.current.sendClearDrawings()}
+                >
+                  <IconPencilX />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Delete all objects" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  onClick={() => objectLayerRef.current?.deleteAll()}
+                >
+                  <IconInputX />
+                </ActionIcon>
+              </Tooltip>
+            </ActionIcon.Group>
           </Group>
         </ScrollArea>
       </Box>
