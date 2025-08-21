@@ -10,19 +10,13 @@ import {
 import type Konva from "konva";
 import * as Y from "yjs";
 import { Layer, Stage, Image as KImage, Transformer } from "react-konva";
-
-type ImageObject = {
-  id: string;
-  src: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rotation: number;
-};
+import type { CanvasObject } from "@/util/types.ts";
+import { latexToSvgDataUrl } from "@/util/latex.ts";
 
 export type ObjectLayerHandle = {
   addImage: (file: File) => void;
+  addLatex: (text: string) => void;
+  updateLatex: (id: string, text: string) => void;
   clearSelection: () => void;
   bringForward: () => void;
   sendBackward: () => void;
@@ -41,7 +35,21 @@ type ObjectProps = {
   objects: Y.Map<Y.Map<unknown>>;
   order: Y.Array<string>;
   onSelectionChange?: (id: string | null) => void;
+  onRequestEditLatex?: (id: string, text: string) => void;
 };
+
+function setObjectToMap<T extends Record<string, unknown>>(
+  m: Y.Map<unknown>,
+  obj: T,
+) {
+  for (const [k, v] of Object.entries(obj)) {
+    m.set(k, v);
+  }
+}
+
+function getObjectFromMap<T = Record<string, unknown>>(m: Y.Map<unknown>) {
+  return Object.fromEntries(m.entries()) as T;
+}
 
 function loadHTMLImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -52,36 +60,51 @@ function loadHTMLImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+function scaleImage(el: HTMLImageElement, maxW = 1000) {
+  const scale = Math.min(1, maxW / (el.naturalWidth || el.width || maxW));
+  const w = Math.max(
+    20,
+    Math.round((el.naturalWidth || el.width || maxW) * scale),
+  );
+  const h = Math.max(
+    20,
+    Math.round((el.naturalHeight || el.height || maxW) * scale),
+  );
+  return { width: w, height: h };
+}
+
 export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
-  { width, height, active, zIndex = 0, doc, objects, order, onSelectionChange },
+  {
+    width,
+    height,
+    active,
+    zIndex = 0,
+    doc,
+    objects,
+    order,
+    onSelectionChange,
+    onRequestEditLatex,
+  },
   ref,
 ) {
-  const [items, setItems] = useState<ImageObject[]>([]);
+  const [items, setItems] = useState<CanvasObject[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const trRef = useRef<Konva.Transformer>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const nodeRefs = useRef<Record<string, Konva.Image | null>>({});
 
   const rebuildItems = () => {
-    const arr: ImageObject[] = [];
+    const arr: CanvasObject[] = [];
     order.toArray().forEach((id) => {
       const m = objects.get(id);
       if (!m) {
         return;
       }
-      const type = m.get("type");
-      if (type !== "image") {
+      const obj = getObjectFromMap<Omit<CanvasObject, "id">>(m);
+      if (obj.type !== "image" && obj.type !== "latex") {
         return;
       }
-      arr.push({
-        id,
-        src: m.get("src") as string,
-        x: m.get("x") as number,
-        y: m.get("y") as number,
-        width: m.get("width") as number,
-        height: m.get("height") as number,
-        rotation: (m.get("rotation") ?? 0) as number,
-      });
+      arr.push({ id, ...obj });
     });
     setItems(arr);
   };
@@ -106,21 +129,12 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       }
       const objectUrl = URL.createObjectURL(file);
       const el = await loadHTMLImage(objectUrl);
-      const maxW = 1000;
-      const scale = Math.min(1, maxW / (el.naturalWidth || el.width || maxW));
-      const w = Math.max(
-        20,
-        Math.round((el.naturalWidth || el.width || maxW) * scale),
-      );
-      const h = Math.max(
-        20,
-        Math.round((el.naturalHeight || el.height || maxW) * scale),
-      );
+      const { width, height } = scaleImage(el);
       const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(el, 0, 0, w, h);
+      ctx.drawImage(el, 0, 0, width, height);
       let url: string;
       try {
         url = canvas.toDataURL("image/webp", 0.8);
@@ -129,19 +143,80 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       }
       canvas.remove();
       const id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const obj: Omit<CanvasObject, "id"> = {
+        type: "image",
+        src: url,
+        x: 120,
+        y: 120,
+        width,
+        height,
+        rotation: 0,
+      };
       doc.transact(() => {
         const m = new Y.Map<unknown>();
-        m.set("type", "image");
-        m.set("src", url);
-        m.set("x", 120);
-        m.set("y", 120);
-        m.set("width", w);
-        m.set("height", h);
-        m.set("rotation", 0);
+        setObjectToMap(m, obj);
         objects.set(id, m);
         order.push([id]);
       }, "local");
       setSelectedId(id);
+    },
+    async addLatex(text: string) {
+      text = text.trim();
+      if (!text) {
+        return;
+      }
+      const url = latexToSvgDataUrl(text, {
+        display: true,
+        encoding: "base64",
+      });
+      const el = await loadHTMLImage(url);
+      const { width, height } = scaleImage(el);
+      const id = `eq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const obj: Omit<CanvasObject, "id"> = {
+        type: "latex",
+        text,
+        src: url,
+        x: 140,
+        y: 140,
+        width,
+        height,
+        rotation: 0,
+      };
+      doc.transact(() => {
+        const m = new Y.Map<unknown>();
+        setObjectToMap(m, obj);
+        objects.set(id, m);
+        order.push([id]);
+      }, "local");
+      setSelectedId(id);
+    },
+    async updateLatex(id: string, text: string) {
+      text = (text || "").trim();
+      const m = objects.get(id);
+      if (!m) {
+        return;
+      }
+      const obj = getObjectFromMap<Omit<CanvasObject, "id">>(m);
+      if (obj.type !== "latex") {
+        return;
+      }
+      const url = latexToSvgDataUrl(text, {
+        display: true,
+        encoding: "base64",
+      });
+      const el = await loadHTMLImage(url);
+      const natW = el.naturalWidth || el.width || 1;
+      const natH = el.naturalHeight || el.height || 1;
+      const newWidth = Math.max(20, obj.width ?? 120);
+      const newHeight = Math.max(20, Math.round(newWidth * (natH / natW)));
+      doc.transact(() => {
+        setObjectToMap(m, {
+          text,
+          src: url,
+          width: newWidth,
+          height: newHeight,
+        });
+      }, "local");
     },
     clearSelection() {
       setSelectedId(null);
@@ -236,16 +311,6 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     onSelectionChange?.(selectedId);
   }, [selectedId, onSelectionChange]);
 
-  const updateItem = (id: string, patch: Partial<ImageObject>) => {
-    const m = objects.get(id);
-    if (!m) {
-      return;
-    }
-    doc.transact(() => {
-      Object.entries(patch).forEach(([k, v]) => m.set(k, v));
-    }, "local");
-  };
-
   const stageStyle: CSSProperties = useMemo(
     () => ({
       position: "absolute",
@@ -288,7 +353,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
             }}
             image={(function () {
               const img = new window.Image();
-              img.src = it.src;
+              img.src = it.src!;
               return img;
             })()}
             x={it.x}
@@ -299,9 +364,22 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
             draggable={active}
             onClick={() => setSelectedId(it.id)}
             onTap={() => setSelectedId(it.id)}
-            onDragEnd={(e) =>
-              updateItem(it.id, { x: e.target.x(), y: e.target.y() })
-            }
+            onDblClick={() => {
+              if (it.type === "latex") {
+                setSelectedId(it.id);
+                onRequestEditLatex?.(it.id, it.text || "");
+              }
+            }}
+            onDragEnd={(e) => {
+              const m = objects.get(it.id);
+              if (!m) {
+                return;
+              }
+              doc.transact(
+                () => setObjectToMap(m, { x: e.target.x(), y: e.target.y() }),
+                "local",
+              );
+            }}
             onTransformEnd={(e) => {
               const node = e.target as Konva.Image;
               const newW = Math.max(20, node.width() * node.scaleX());
@@ -311,13 +389,21 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
               const newY = node.y();
               node.scaleX(1);
               node.scaleY(1);
-              updateItem(it.id, {
-                x: newX,
-                y: newY,
-                width: newW,
-                height: newH,
-                rotation,
-              });
+              const m = objects.get(it.id);
+              if (!m) {
+                return;
+              }
+              doc.transact(
+                () =>
+                  setObjectToMap(m, {
+                    x: newX,
+                    y: newY,
+                    width: newW,
+                    height: newH,
+                    rotation,
+                  }),
+                "local",
+              );
             }}
             onMouseDown={() => setSelectedId(it.id)}
             onMouseEnter={(e) => {

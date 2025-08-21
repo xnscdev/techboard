@@ -31,6 +31,7 @@ import {
   IconCopy,
   IconEraser,
   IconInputX,
+  IconMathFunction,
   IconPencil,
   IconPencilX,
   IconPhotoPlus,
@@ -43,6 +44,8 @@ import { createWS } from "@/util/ws.ts";
 import type { Point, Segment, StrokeEvent, Tool } from "@/util/types.ts";
 import { drawStroke, replay, setupCanvas } from "@/util/canvas.ts";
 import ObjectLayer, { type ObjectLayerHandle } from "@/page/ObjectLayer.tsx";
+import { useDisclosure } from "@mantine/hooks";
+import EditEquationModal from "@/page/EditEquationModal.tsx";
 
 const wsUrl: string = import.meta.env.VITE_WS_URL ?? "http://localhost:5174";
 const boardWidth = 2400;
@@ -51,13 +54,17 @@ const boardHeight = 1600;
 export default function Room() {
   const { roomId } = useParams();
   const navigate = useNavigate();
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+
   const [wsReady, setWsReady] = useState(false);
   const wsRef = useRef(createWS(wsUrl));
+
   const docRef = useRef<Y.Doc | null>(null);
   const objectsRef = useRef<Y.Map<Y.Map<unknown>> | null>(null);
   const orderRef = useRef<Y.Array<string> | null>(null);
+
   const drawingRef = useRef(false);
   const lastPosRef = useRef<Point | null>(null);
   const pendingSegmentsRef = useRef<Segment[]>([]);
@@ -65,9 +72,15 @@ export default function Room() {
   const [tool, setTool] = useState<Tool>("select");
   const [color, setColor] = useState<string>("#000000");
   const [lineWidth, setLineWidth] = useState<number>(2);
+
   const objectLayerRef = useRef<ObjectLayerHandle | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const resetRef = useRef<() => void>(null);
+
+  const [latexModalOpened, { open: latexModalOpen, close: latexModalClose }] =
+    useDisclosure(false);
+  const [latexInitial, setLatexInitial] = useState<string>("");
+  const [editingLatexId, setEditingLatexId] = useState<string | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -309,6 +322,18 @@ export default function Room() {
                 </Tooltip>
               )}
             </FileButton>
+            <Tooltip label="Insert equation" openDelay={300}>
+              <ActionIcon
+                variant="subtle"
+                onClick={() => {
+                  setEditingLatexId(null);
+                  setLatexInitial("");
+                  latexModalOpen();
+                }}
+              >
+                <IconMathFunction />
+              </ActionIcon>
+            </Tooltip>
             <Divider orientation="vertical" />
             <Tooltip label="Pen color" openDelay={300}>
               <ColorInput
@@ -462,10 +487,34 @@ export default function Room() {
               objects={objectsRef.current}
               order={orderRef.current!}
               onSelectionChange={setSelectedId}
+              onRequestEditLatex={(id, text) => {
+                setEditingLatexId(id);
+                setLatexInitial(text ?? "");
+                latexModalOpen();
+              }}
             />
           )}
         </div>
       </Box>
+      <EditEquationModal
+        opened={latexModalOpened}
+        onCancel={latexModalClose}
+        onConfirm={(text) => {
+          if (!text) {
+            latexModalClose();
+            return;
+          }
+          if (editingLatexId) {
+            objectLayerRef.current?.updateLatex(editingLatexId, text);
+          } else {
+            objectLayerRef.current?.addLatex(text);
+          }
+          latexModalClose();
+        }}
+        initial={latexInitial}
+        title={editingLatexId ? "Edit LaTeX Equation" : "Insert LaTeX Equation"}
+        confirmLabel={editingLatexId ? "Update" : "Insert"}
+      />
     </Stack>
   );
 }
