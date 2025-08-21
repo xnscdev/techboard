@@ -91,16 +91,23 @@ export default function Room() {
     }
     const ws = wsRef.current;
 
+    const clearCanvas = (
+      ctx: CanvasRenderingContext2D,
+      canvas: HTMLCanvasElement,
+    ) => {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+    };
+
     const onInit = (strokes: StrokeEvent[]) => {
       if (!ctxRef.current) {
         return;
       }
       const canvas = canvasRef.current!;
       const ctx = ctxRef.current!;
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-      ctx.restore();
+      clearCanvas(ctx, canvas);
       replay(ctx, strokes);
     };
 
@@ -117,10 +124,7 @@ export default function Room() {
       }
       const canvas = canvasRef.current!;
       const ctx = ctxRef.current!;
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-      ctx.restore();
+      clearCanvas(ctx, canvas);
     };
 
     const doc = new Y.Doc();
