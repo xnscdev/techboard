@@ -27,3 +27,13 @@ export function scaleImage(
 ) {
   return scaleSize(el.naturalWidth, el.naturalHeight, minSide, maxSide);
 }
+
+export function scaleResize(width: number, height: number, min?: number) {
+  width = Math.round(width);
+  height = Math.round(height);
+  if (min) {
+    width = Math.max(min, width);
+    height = Math.max(min, height);
+  }
+  return { width, height };
+}

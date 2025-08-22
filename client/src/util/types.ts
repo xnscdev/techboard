@@ -42,6 +42,10 @@ export type TextObject = {
   y: number;
   width: number;
   rotation: number;
+  fontSize: number;
+  fontFamily: string;
+  color: string;
+  align: "left" | "center" | "right";
 };
 
-export type CanvasObject = ImageObject | LatexObject;
+export type CanvasObject = ImageObject | LatexObject | TextObject;

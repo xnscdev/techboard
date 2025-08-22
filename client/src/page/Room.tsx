@@ -37,14 +37,17 @@ import {
   IconPointer,
   IconRulerMeasure,
   IconTrashX,
+  IconTypography,
 } from "@tabler/icons-react";
 import * as Y from "yjs";
 import { useDisclosure } from "@mantine/hooks";
 import { createWS } from "@/util/ws.ts";
 import type { Point, Segment, StrokeEvent, Tool } from "@/util/types.ts";
 import { drawStroke, replay, setupCanvas } from "@/util/canvas.ts";
-import ObjectLayer, { type ObjectLayerHandle } from "@/page/ObjectLayer.tsx";
-import EditEquationModal from "@/page/EditEquationModal.tsx";
+import ObjectLayer, {
+  type ObjectLayerHandle,
+} from "@/components/ObjectLayer.tsx";
+import EditEquationModal from "@/components/EditEquationModal.tsx";
 
 const wsUrl: string = import.meta.env.VITE_WS_URL ?? "http://localhost:5174";
 const boardWidth = 2400;
@@ -337,6 +340,14 @@ export default function Room() {
                   }}
                 >
                   <IconMathFunction />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Insert text" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  onClick={() => objectLayerRef.current?.addText()}
+                >
+                  <IconTypography />
                 </ActionIcon>
               </Tooltip>
             </ActionIcon.Group>

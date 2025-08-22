@@ -32,6 +32,9 @@ importers:
       react-konva:
         specifier: ^19.0.7
         version: 19.0.7(@types/react@19.1.10)(konva@9.3.22)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      react-konva-utils:
+        specifier: ^1.1.2
+        version: 1.1.2(its-fine@2.0.0(@types/react@19.1.10)(react@19.1.1))(konva@9.3.22)(react-dom@19.1.1(react@19.1.1))(react-konva@19.0.7(@types/react@19.1.10)(konva@9.3.22)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)
       react-router-dom:
         specifier: ^7.8.1
         version: 7.8.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -1194,6 +1197,15 @@ packages:
     peerDependencies:
       react: ^19.1.1
 
+  react-konva-utils@1.1.2:
+    resolution: {integrity: sha512-21pLxe3hFQCdF0dqyHzsB6ud0FtBMSJC2Fy8a77HoUSX5K5piYl5UuH95nrSqq+Acipb4WOv17WMTH65VHF5/w==}
+    peerDependencies:
+      its-fine: ^1.2.5 || ^2.0.0
+      konva: ^8.3.5 || ^9.0.0
+      react: ^18.2.0 || ^19.0.0
+      react-dom: ^18.2.0 || ^19.0.0
+      react-konva: ^18.2.10 || ^19.0.1
+
   react-konva@19.0.7:
     resolution: {integrity: sha512-uYWCpSv4ajLymTh8S8fV9396fHDX7eDTWiLGkYlBuawud5MoNiuGjapPhA5Avdy/Jfh9P2KaWuNf4i9PI1F9HQ==}
     peerDependencies:
@@ -1413,6 +1425,12 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  use-image@1.1.4:
+    resolution: {integrity: sha512-P+swhszzHHgEb2X2yQ+vQNPCq/8Ks3hyfdXAVN133pvnvK7UK++bUaZUa5E+A3S02Mw8xOCBr9O6CLhk2fjrWA==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
 
   use-isomorphic-layout-effect@1.2.1:
     resolution: {integrity: sha512-tpZZ+EX0gaghDAiFR37hj5MgY6ZN55kLiPkJsKxBMZ6GZdOSPJXiOzPM984oPYZ5AnehYx5WQp1+ME8I/P/pRA==}
@@ -2549,6 +2567,15 @@ snapshots:
       react: 19.1.1
       scheduler: 0.26.0
 
+  react-konva-utils@1.1.2(its-fine@2.0.0(@types/react@19.1.10)(react@19.1.1))(konva@9.3.22)(react-dom@19.1.1(react@19.1.1))(react-konva@19.0.7(@types/react@19.1.10)(konva@9.3.22)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1):
+    dependencies:
+      its-fine: 2.0.0(@types/react@19.1.10)(react@19.1.1)
+      konva: 9.3.22
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
+      react-konva: 19.0.7(@types/react@19.1.10)(konva@9.3.22)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      use-image: 1.1.4(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+
   react-konva@19.0.7(@types/react@19.1.10)(konva@9.3.22)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       '@types/react-reconciler': 0.32.0(@types/react@19.1.10)
@@ -2769,6 +2796,11 @@ snapshots:
       react: 19.1.1
     optionalDependencies:
       '@types/react': 19.1.10
+
+  use-image@1.1.4(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+    dependencies:
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
 
   use-isomorphic-layout-effect@1.2.1(@types/react@19.1.10)(react@19.1.1):
     dependencies:

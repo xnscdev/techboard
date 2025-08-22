@@ -9,15 +9,23 @@ import {
 } from "react";
 import type Konva from "konva";
 import * as Y from "yjs";
-import { Layer, Stage, Image as KImage, Transformer } from "react-konva";
-import type { CanvasObject, ImageObject, LatexObject } from "@/util/types.ts";
+import { Layer, Stage, Transformer } from "react-konva";
+import type {
+  CanvasObject,
+  ImageObject,
+  LatexObject,
+  TextObject,
+} from "@/util/types.ts";
 import { latexToSvgDataUrl } from "@/util/latex.ts";
-import { scaleImage } from "@/util/size.ts";
+import { scaleImage, scaleResize } from "@/util/size.ts";
+import ImageWrapper from "@/components/ImageWrapper.tsx";
+import TextWrapper from "@/components/TextWrapper.tsx";
 
 export type ObjectLayerHandle = {
   addImage: (file: File) => void;
   addLatex: (text: string) => void;
   updateLatex: (id: string, text: string) => void;
+  addText: () => void;
   clearSelection: () => void;
   bringForward: () => void;
   sendBackward: () => void;
@@ -78,31 +86,34 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
   const [items, setItems] = useState<CanvasObject[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const trRef = useRef<Konva.Transformer>(null);
-  const nodeRefs = useRef<Record<string, Konva.Image | null>>({});
+  const nodeRefs = useRef<Record<string, Konva.Node | null>>({});
 
-  const rebuildItems = () => {
-    const arr: CanvasObject[] = [];
-    order.toArray().forEach((id) => {
-      const m = objects.get(id);
-      if (!m) {
-        return;
-      }
-      const obj = getObjectFromMap<Omit<CanvasObject, "id">>(m);
-      if (obj.type !== "image" && obj.type !== "latex") {
-        return;
-      }
-      arr.push({ id, ...obj } as CanvasObject);
-    });
-    setItems(arr);
-  };
+  const selectedObject = useMemo(
+    () =>
+      selectedId ? items.find((it) => it.id === selectedId) || null : null,
+    [items, selectedId],
+  );
 
   useEffect(() => {
-    if (selectedId && !items.some((it) => it.id === selectedId)) {
+    if (selectedId && !selectedObject) {
       setSelectedId(null);
     }
-  }, [items, selectedId]);
+  }, [selectedId, selectedObject]);
 
   useEffect(() => {
+    const rebuildItems = () => {
+      const arr: CanvasObject[] = [];
+      order.toArray().forEach((id) => {
+        const m = objects.get(id);
+        if (!m) {
+          return;
+        }
+        const obj = getObjectFromMap<Omit<CanvasObject, "id">>(m);
+        const newObj = { id, ...obj } as CanvasObject;
+        arr.push(newObj);
+      });
+      setItems(arr);
+    };
     const onUpdate = () => rebuildItems();
     doc.on("update", onUpdate);
     rebuildItems();
@@ -201,6 +212,28 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
           height,
         });
       }, "local");
+    },
+    addText() {
+      const id = `txt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const obj: Omit<TextObject, "id"> = {
+        type: "text",
+        text: "Double-click to edit",
+        x: 140,
+        y: 140,
+        width: 240,
+        rotation: 0,
+        fontSize: 20,
+        fontFamily: "Arial",
+        color: "#000000",
+        align: "center",
+      };
+      doc.transact(() => {
+        const m = new Y.Map<unknown>();
+        setObjectToMap(m, obj);
+        objects.set(id, m);
+        order.push([id]);
+      }, "local");
+      setSelectedId(id);
     },
     clearSelection() {
       setSelectedId(null);
@@ -312,6 +345,14 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     }
   };
 
+  const updateObject = (id: string, obj: Partial<Omit<CanvasObject, "id">>) => {
+    const m = objects.get(id);
+    if (!m) {
+      return;
+    }
+    doc.transact(() => setObjectToMap(m, obj), "local");
+  };
+
   return (
     <Stage
       width={width}
@@ -331,84 +372,47 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       }}
     >
       <Layer listening={active}>
-        {items.map((it) => (
-          <KImage
-            key={it.id}
-            ref={(node) => {
-              if (node) {
-                nodeRefs.current[it.id] = node;
-              } else {
-                delete nodeRefs.current[it.id];
-              }
-            }}
-            image={(function () {
-              const img = new window.Image();
-              img.src = it.src!;
-              return img;
-            })()}
-            x={it.x}
-            y={it.y}
-            width={it.width}
-            height={it.height}
-            rotation={it.rotation}
-            draggable={active}
-            onClick={() => setSelectedId(it.id)}
-            onTap={() => setSelectedId(it.id)}
-            onDblClick={() => editObject(it)}
-            onDblTap={() => editObject(it)}
-            onDragEnd={(e) => {
-              const m = objects.get(it.id);
-              if (!m) {
-                return;
-              }
-              doc.transact(
-                () => setObjectToMap(m, { x: e.target.x(), y: e.target.y() }),
-                "local",
-              );
-            }}
-            onTransformEnd={(e) => {
-              const node = e.target as Konva.Image;
-              const newW = Math.max(20, node.width() * node.scaleX());
-              const newH = Math.max(20, node.height() * node.scaleY());
-              const rotation = node.rotation();
-              const newX = node.x();
-              const newY = node.y();
-              node.scaleX(1);
-              node.scaleY(1);
-              const m = objects.get(it.id);
-              if (!m) {
-                return;
-              }
-              doc.transact(
-                () =>
-                  setObjectToMap(m, {
-                    x: newX,
-                    y: newY,
-                    width: newW,
-                    height: newH,
-                    rotation,
-                  }),
-                "local",
-              );
-            }}
-            onMouseDown={() => setSelectedId(it.id)}
-            onMouseEnter={(e) => {
-              if (!active) {
-                return;
-              }
-              e.target
-                .getStage()
-                ?.container()
-                .style.setProperty("cursor", "move");
-            }}
-            onMouseLeave={(e) => {
-              if (!active) {
-                return;
-              }
-              e.target.getStage()?.container().style.removeProperty("cursor");
-            }}
-          />
-        ))}
+        {items.map((it) => {
+          if (it.type === "image" || it.type === "latex") {
+            return (
+              <ImageWrapper
+                key={it.id}
+                obj={it}
+                active={active}
+                nodeRef={(node) => {
+                  if (node) {
+                    nodeRefs.current[it.id] = node;
+                  } else {
+                    delete nodeRefs.current[it.id];
+                  }
+                }}
+                select={() => setSelectedId(it.id)}
+                edit={() => editObject(it)}
+                update={updateObject}
+              />
+            );
+          } else if (it.type === "text") {
+            return (
+              <TextWrapper
+                key={it.id}
+                obj={it}
+                active={active}
+                nodeRef={(node) => {
+                  if (node) {
+                    nodeRefs.current[it.id] = node;
+                  } else {
+                    delete nodeRefs.current[it.id];
+                  }
+                }}
+                select={() => setSelectedId(it.id)}
+                edit={() => {}}
+                update={updateObject}
+              />
+            );
+          } else {
+            return null;
+          }
+        })}
         <Transformer
           ref={trRef}
           rotateEnabled
@@ -427,6 +431,10 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
             "top-center",
             "bottom-center",
           ]}
+          boundBoxFunc={(_oldBox, newBox) => ({
+            ...newBox,
+            ...scaleResize(newBox.width, newBox.height, 20),
+          })}
         />
       </Layer>
     </Stage>
