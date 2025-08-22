@@ -12,6 +12,7 @@ import * as Y from "yjs";
 import { Layer, Stage, Image as KImage, Transformer } from "react-konva";
 import type { CanvasObject } from "@/util/types.ts";
 import { latexToSvgDataUrl } from "@/util/latex.ts";
+import { scaleImage } from "@/util/size.ts";
 
 export type ObjectLayerHandle = {
   addImage: (file: File) => void;
@@ -58,19 +59,6 @@ function loadHTMLImage(src: string): Promise<HTMLImageElement> {
     img.onerror = reject;
     img.src = src;
   });
-}
-
-function scaleImage(el: HTMLImageElement, maxW = 1000) {
-  const scale = Math.min(1, maxW / (el.naturalWidth || el.width || maxW));
-  const w = Math.max(
-    20,
-    Math.round((el.naturalWidth || el.width || maxW) * scale),
-  );
-  const h = Math.max(
-    20,
-    Math.round((el.naturalHeight || el.height || maxW) * scale),
-  );
-  return { width: w, height: h };
 }
 
 export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
@@ -129,7 +117,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       }
       const objectUrl = URL.createObjectURL(file);
       const el = await loadHTMLImage(objectUrl);
-      const { width, height } = scaleImage(el);
+      const { width, height } = scaleImage(el, 20, 1000);
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
@@ -170,7 +158,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         encoding: "base64",
       });
       const el = await loadHTMLImage(url);
-      const { width, height } = scaleImage(el);
+      const { width, height } = scaleImage(el, 20);
       const id = `eq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const obj: Omit<CanvasObject, "id"> = {
         type: "latex",
@@ -205,16 +193,13 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         encoding: "base64",
       });
       const el = await loadHTMLImage(url);
-      const natW = el.naturalWidth || el.width || 1;
-      const natH = el.naturalHeight || el.height || 1;
-      const newWidth = Math.max(20, obj.width ?? 120);
-      const newHeight = Math.max(20, Math.round(newWidth * (natH / natW)));
+      const { width, height } = scaleImage(el, 20);
       doc.transact(() => {
         setObjectToMap(m, {
           text,
           src: url,
-          width: newWidth,
-          height: newHeight,
+          width,
+          height,
         });
       }, "local");
     },
