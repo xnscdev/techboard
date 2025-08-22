@@ -10,7 +10,7 @@ import {
 import type Konva from "konva";
 import * as Y from "yjs";
 import { Layer, Stage, Image as KImage, Transformer } from "react-konva";
-import type { CanvasObject } from "@/util/types.ts";
+import type { CanvasObject, ImageObject, LatexObject } from "@/util/types.ts";
 import { latexToSvgDataUrl } from "@/util/latex.ts";
 import { scaleImage } from "@/util/size.ts";
 
@@ -78,7 +78,6 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
   const [items, setItems] = useState<CanvasObject[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const trRef = useRef<Konva.Transformer>(null);
-  const stageRef = useRef<Konva.Stage>(null);
   const nodeRefs = useRef<Record<string, Konva.Image | null>>({});
 
   const rebuildItems = () => {
@@ -92,7 +91,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       if (obj.type !== "image" && obj.type !== "latex") {
         return;
       }
-      arr.push({ id, ...obj });
+      arr.push({ id, ...obj } as CanvasObject);
     });
     setItems(arr);
   };
@@ -131,7 +130,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       }
       canvas.remove();
       const id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const obj: Omit<CanvasObject, "id"> = {
+      const obj: Omit<ImageObject, "id"> = {
         type: "image",
         src: url,
         x: 120,
@@ -160,7 +159,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       const el = await loadHTMLImage(url);
       const { width, height } = scaleImage(el, 20);
       const id = `eq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const obj: Omit<CanvasObject, "id"> = {
+      const obj: Omit<LatexObject, "id"> = {
         type: "latex",
         text,
         src: url,
@@ -306,9 +305,15 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     [active, zIndex],
   );
 
+  const editObject = (obj: CanvasObject) => {
+    if (obj.type === "latex") {
+      setSelectedId(obj.id);
+      onRequestEditLatex?.(obj.id, obj.text || "");
+    }
+  };
+
   return (
     <Stage
-      ref={stageRef}
       width={width}
       height={height}
       style={stageStyle}
@@ -349,12 +354,8 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
             draggable={active}
             onClick={() => setSelectedId(it.id)}
             onTap={() => setSelectedId(it.id)}
-            onDblClick={() => {
-              if (it.type === "latex") {
-                setSelectedId(it.id);
-                onRequestEditLatex?.(it.id, it.text || "");
-              }
-            }}
+            onDblClick={() => editObject(it)}
+            onDblTap={() => editObject(it)}
             onDragEnd={(e) => {
               const m = objects.get(it.id);
               if (!m) {
@@ -411,6 +412,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         <Transformer
           ref={trRef}
           rotateEnabled
+          flipEnabled={false}
           keepRatio={false}
           anchorSize={8}
           anchorStroke="#333"

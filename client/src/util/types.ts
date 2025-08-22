@@ -11,16 +11,37 @@ export type StrokeEvent = {
   color?: string;
 };
 
-export type ObjectType = "image" | "latex";
-
-export type CanvasObject = {
+export type ImageObject = {
   id: string;
-  type: ObjectType;
-  src?: string;
-  text?: string;
+  type: "image";
+  src: string;
   x: number;
   y: number;
   width: number;
   height: number;
   rotation: number;
 };
+
+export type LatexObject = {
+  id: string;
+  type: "latex";
+  src: string;
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+};
+
+export type TextObject = {
+  id: string;
+  type: "text";
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  rotation: number;
+};
+
+export type CanvasObject = ImageObject | LatexObject;
