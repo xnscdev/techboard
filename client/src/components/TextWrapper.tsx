@@ -27,6 +27,10 @@ export default function TextWrapper({
       y={obj.y}
       width={obj.width}
       rotation={obj.rotation}
+      fontFamily={obj.fontFamily}
+      fontSize={obj.fontSize}
+      fill={obj.color}
+      align={obj.align}
       draggable={active}
       onClick={select}
       onTap={select}
