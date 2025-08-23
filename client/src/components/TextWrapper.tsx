@@ -41,16 +41,16 @@ export default function TextWrapper({
       }}
       onTransformEnd={(e) => {
         const node = e.target as Konva.Text;
-        const newW = Math.max(30, node.width() * node.scaleX());
+        const x = node.x();
+        const y = node.y();
+        const width = node.width() * node.scaleX();
         const rotation = node.rotation();
-        const newX = node.x();
-        const newY = node.y();
         node.scaleX(1);
         node.scaleY(1);
         update(obj.id, {
-          x: newX,
-          y: newY,
-          width: newW,
+          x,
+          y,
+          width,
           rotation,
         });
       }}

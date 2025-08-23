@@ -43,18 +43,18 @@ export default function ImageWrapper({
       onDragEnd={(e) => update(obj.id, { x: e.target.x(), y: e.target.y() })}
       onTransformEnd={(e) => {
         const node = e.target as Konva.Image;
-        const newW = Math.max(20, node.width() * node.scaleX());
-        const newH = Math.max(20, node.height() * node.scaleY());
+        const x = node.x();
+        const y = node.y();
+        const width = node.width() * node.scaleX();
+        const height = node.height() * node.scaleY();
         const rotation = node.rotation();
-        const newX = node.x();
-        const newY = node.y();
         node.scaleX(1);
         node.scaleY(1);
         update(obj.id, {
-          x: newX,
-          y: newY,
-          width: newW,
-          height: newH,
+          x,
+          y,
+          width,
+          height,
           rotation,
         });
       }}
