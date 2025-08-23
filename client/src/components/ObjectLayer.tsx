@@ -85,6 +85,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
 ) {
   const [items, setItems] = useState<CanvasObject[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isEditingText, setIsEditingText] = useState<boolean>(false);
   const trRef = useRef<Konva.Transformer>(null);
   const nodeRefs = useRef<Record<string, Konva.Node | null>>({});
 
@@ -312,7 +313,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     if (!tr) {
       return;
     }
-    if (!selectedId) {
+    if (!selectedId || isEditingText) {
       tr.nodes([]);
       tr.getLayer()?.batchDraw();
       return;
@@ -322,7 +323,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       tr.nodes([node]);
       tr.getLayer()?.batchDraw();
     }
-  }, [selectedId, items]);
+  }, [selectedId, items, isEditingText]);
 
   useEffect(() => {
     onSelectionChange?.(selectedId);
@@ -405,8 +406,13 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
                   }
                 }}
                 select={() => setSelectedId(it.id)}
-                edit={() => {}}
                 update={updateObject}
+                onEditChange={setIsEditingText}
+                saveText={(text) =>
+                  updateObject(it.id, { text } as Partial<
+                    Omit<TextObject, "id">
+                  >)
+                }
               />
             );
           } else {
