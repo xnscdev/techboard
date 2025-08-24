@@ -105,6 +105,21 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
   }, [selectedId, selectedObject]);
 
   useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Backspace" && selectedId && !isEditingText) {
+        doc.transact(() => {
+          objects.delete(selectedId);
+          const idx = order.toArray().indexOf(selectedId);
+          order.delete(idx, 1);
+        });
+        setSelectedId(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
+  useEffect(() => {
     const rebuildItems = () => {
       const arr: CanvasObject[] = [];
       order.toArray().forEach((id) => {

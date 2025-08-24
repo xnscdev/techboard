@@ -127,6 +127,7 @@ export default function Room() {
   const [selectedObject, setSelectedObject] = useState<CanvasObject | null>(
     null,
   );
+  const [showDragOverlay, setShowDragOverlay] = useState(false);
 
   const [latexModalOpened, { open: latexModalOpen, close: latexModalClose }] =
     useDisclosure(false);
@@ -225,7 +226,7 @@ export default function Room() {
       ws.socket.disconnect();
       wsRef.current = null;
     };
-  }, [roomId, wsUrl, navigate]);
+  }, [roomId, navigate]);
 
   useEffect(() => {
     if (tool !== "select") {
@@ -407,6 +408,7 @@ export default function Room() {
                         return;
                       }
                       objectLayerRef.current?.addImage(file);
+                      setTool("select");
                       e.currentTarget.value = "";
                     }}
                   />
@@ -427,14 +429,15 @@ export default function Room() {
               <Tooltip label="Insert text" openDelay={300}>
                 <ActionIcon
                   variant="default"
-                  onClick={() =>
+                  onClick={() => {
                     objectLayerRef.current?.addText({
                       fontFamily,
                       fontSize,
                       color: textColor,
                       align: textAlign,
-                    })
-                  }
+                    });
+                    setTool("select");
+                  }}
                 >
                   <IconTypography size={18} />
                 </ActionIcon>
@@ -641,6 +644,17 @@ export default function Room() {
             height: boardHeight,
             position: "relative",
           }}
+          onDragEnter={() => setShowDragOverlay(true)}
+          onDragOver={(e) => e.preventDefault()}
+          onDragLeave={() => setShowDragOverlay(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setShowDragOverlay(false);
+            const files = Array.from(e.dataTransfer.files);
+            files
+              .filter((file) => file.type.startsWith("image/"))
+              .forEach((file) => objectLayerRef.current?.addImage(file));
+          }}
         >
           <canvas
             ref={canvasRef}
@@ -676,6 +690,20 @@ export default function Room() {
               }}
             />
           )}
+          {showDragOverlay && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                zIndex: 5,
+                border: "2px dashed #339af0",
+                background: "rgba(51,154,240,0.06)",
+                borderRadius: 8,
+              }}
+              aria-hidden
+            />
+          )}
         </div>
       </Box>
       <EditEquationModal
@@ -690,6 +718,7 @@ export default function Room() {
             objectLayerRef.current?.updateLatex(editingLatexId, text);
           } else {
             objectLayerRef.current?.addLatex(text);
+            setTool("select");
           }
           latexModalClose();
         }}
