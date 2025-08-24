@@ -13,19 +13,18 @@ import {
   CopyButton,
   Divider,
   Group,
-  Popover,
+  NumberInput,
   ScrollArea,
-  Slider,
+  Select,
   Stack,
   Text,
   Title,
   Tooltip,
 } from "@mantine/core";
 import {
-  IconArrowBarToDown,
-  IconArrowBarToUp,
-  IconArrowDown,
-  IconArrowUp,
+  IconAlignCenter,
+  IconAlignLeft,
+  IconAlignRight,
   IconCheck,
   IconCopy,
   IconEraser,
@@ -36,13 +35,26 @@ import {
   IconPhotoPlus,
   IconPointer,
   IconRulerMeasure,
+  IconStackBack,
+  IconStackBackward,
+  IconStackForward,
+  IconStackFront,
+  IconTextSize,
   IconTrashX,
+  IconTypeface,
   IconTypography,
 } from "@tabler/icons-react";
 import * as Y from "yjs";
-import { useDisclosure } from "@mantine/hooks";
-import { createWS } from "@/util/ws.ts";
-import type { Point, Segment, StrokeEvent, Tool } from "@/util/types.ts";
+import { useDebouncedCallback, useDisclosure } from "@mantine/hooks";
+import { createWS, type WS } from "@/util/ws.ts";
+import type {
+  CanvasObject,
+  Point,
+  Segment,
+  StrokeEvent,
+  TextAttributes,
+  Tool,
+} from "@/util/types.ts";
 import { drawStroke, replay, setupCanvas } from "@/util/canvas.ts";
 import ObjectLayer, {
   type ObjectLayerHandle,
@@ -53,6 +65,23 @@ const wsUrl: string = import.meta.env.VITE_WS_URL ?? "http://localhost:5174";
 const boardWidth = 2400;
 const boardHeight = 1600;
 
+const colorSwatches = [
+  "#000000",
+  "#868e96",
+  "#fa5252",
+  "#e64980",
+  "#be4bdb",
+  "#7950f2",
+  "#4c6ef5",
+  "#228be6",
+  "#15aabf",
+  "#12b886",
+  "#40c057",
+  "#82c91e",
+  "#fab005",
+  "#fd7e14",
+];
+
 export default function Room() {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -61,7 +90,7 @@ export default function Room() {
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   const [wsReady, setWsReady] = useState(false);
-  const wsRef = useRef(createWS(wsUrl));
+  const wsRef = useRef<WS | null>(null);
 
   const docRef = useRef<Y.Doc | null>(null);
   const objectsRef = useRef<Y.Map<Y.Map<unknown>> | null>(null);
@@ -72,11 +101,21 @@ export default function Room() {
   const pendingSegmentsRef = useRef<Segment[]>([]);
   const flushTimerRef = useRef<number | null>(null);
   const [tool, setTool] = useState<Tool>("select");
-  const [color, setColor] = useState<string>("#000000");
+
+  const [penColor, setPenColor] = useState<string>("#000000");
   const [lineWidth, setLineWidth] = useState<number>(2);
 
+  const [fontFamily, setFontFamily] = useState<string>("Arial");
+  const [fontSize, setFontSize] = useState<number>(20);
+  const [textColor, setTextColor] = useState<string>("#000000");
+  const [textAlign, setTextAlign] = useState<"left" | "center" | "right">(
+    "center",
+  );
+
   const objectLayerRef = useRef<ObjectLayerHandle | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedObject, setSelectedObject] = useState<CanvasObject | null>(
+    null,
+  );
 
   const [latexModalOpened, { open: latexModalOpen, close: latexModalClose }] =
     useDisclosure(false);
@@ -92,7 +131,9 @@ export default function Room() {
     if (!roomId) {
       return;
     }
-    const ws = wsRef.current;
+
+    const ws = createWS(wsUrl);
+    wsRef.current = ws;
 
     const clearCanvas = (
       ctx: CanvasRenderingContext2D,
@@ -139,7 +180,7 @@ export default function Room() {
       if (origin === "remote") {
         return;
       }
-      ws.sendUpdateDoc(update);
+      wsRef.current?.sendUpdateDoc(update);
     };
     doc.on("update", onLocalUpdateDoc);
 
@@ -166,9 +207,14 @@ export default function Room() {
       ws.socket.removeAllListeners("updateDoc");
       docRef.current?.off("update", onLocalUpdateDoc);
       docRef.current?.destroy();
+      docRef.current = null;
+      objectsRef.current = null;
+      orderRef.current = null;
       setWsReady(false);
+      ws.socket.disconnect();
+      wsRef.current = null;
     };
-  }, [roomId]);
+  }, [roomId, wsUrl, navigate]);
 
   useEffect(() => {
     if (tool !== "select") {
@@ -176,12 +222,26 @@ export default function Room() {
     }
   }, [tool]);
 
+  useEffect(() => {
+    if (selectedObject?.type === "text") {
+      setFontFamily(selectedObject.fontFamily);
+      setFontSize(selectedObject.fontSize);
+      setTextColor(selectedObject.color);
+      setTextAlign(selectedObject.align);
+    }
+  }, [selectedObject]);
+
   const flush = () => {
     const segs = pendingSegmentsRef.current;
     pendingSegmentsRef.current = [];
     if (segs.length && wsReady) {
-      const payload: StrokeEvent = { segments: segs, tool, lineWidth, color };
-      wsRef.current.sendDraw(payload);
+      const payload: StrokeEvent = {
+        segments: segs,
+        tool,
+        lineWidth,
+        color: penColor,
+      };
+      wsRef.current?.sendDraw(payload);
     }
   };
 
@@ -220,7 +280,7 @@ export default function Room() {
       segments: [seg],
       tool,
       lineWidth,
-      color,
+      color: penColor,
     });
     pendingSegmentsRef.current.push(seg);
     scheduleFlush();
@@ -234,15 +294,26 @@ export default function Room() {
     drawingRef.current = false;
     lastPosRef.current = null;
     if (pendingSegmentsRef.current.length && wsReady) {
-      wsRef.current.sendDraw({
+      wsRef.current?.sendDraw({
         segments: pendingSegmentsRef.current,
         tool,
         lineWidth,
-        color,
+        color: penColor,
       });
       pendingSegmentsRef.current = [];
     }
   };
+
+  const updateTextAttributes = (attr: Partial<TextAttributes>) => {
+    if (selectedObject) {
+      objectLayerRef.current?.updateText(selectedObject.id, attr);
+    }
+  };
+
+  const updateTextAttributesDebounced = useDebouncedCallback(
+    updateTextAttributes,
+    200,
+  );
 
   return (
     <Stack p="md" gap="md" h="100vh">
@@ -289,7 +360,7 @@ export default function Room() {
                   onClick={() => setTool("select")}
                   aria-pressed={tool === "select"}
                 >
-                  <IconPointer />
+                  <IconPointer size={18} />
                 </ActionIcon>
               </Tooltip>
               <Tooltip label="Pen" openDelay={300}>
@@ -298,7 +369,7 @@ export default function Room() {
                   onClick={() => setTool("pen")}
                   aria-pressed={tool === "pen"}
                 >
-                  <IconPencil />
+                  <IconPencil size={18} />
                 </ActionIcon>
               </Tooltip>
               <Tooltip label="Eraser" openDelay={300}>
@@ -307,14 +378,14 @@ export default function Room() {
                   onClick={() => setTool("eraser")}
                   aria-pressed={tool === "eraser"}
                 >
-                  <IconEraser />
+                  <IconEraser size={18} />
                 </ActionIcon>
               </Tooltip>
             </ActionIcon.Group>
             <ActionIcon.Group>
               <Tooltip label="Insert image" openDelay={300}>
                 <ActionIcon component="label" variant="default">
-                  <IconPhotoPlus />
+                  <IconPhotoPlus size={18} />
                   <input
                     type="file"
                     accept="image/*"
@@ -339,120 +410,200 @@ export default function Room() {
                     latexModalOpen();
                   }}
                 >
-                  <IconMathFunction />
+                  <IconMathFunction size={18} />
                 </ActionIcon>
               </Tooltip>
               <Tooltip label="Insert text" openDelay={300}>
                 <ActionIcon
                   variant="default"
-                  onClick={() => objectLayerRef.current?.addText()}
+                  onClick={() =>
+                    objectLayerRef.current?.addText({
+                      fontFamily,
+                      fontSize,
+                      color: textColor,
+                      align: textAlign,
+                    })
+                  }
                 >
-                  <IconTypography />
+                  <IconTypography size={18} />
                 </ActionIcon>
               </Tooltip>
             </ActionIcon.Group>
             <Divider orientation="vertical" />
             <Tooltip label="Pen color" openDelay={300}>
               <ColorInput
-                value={color}
-                onChange={setColor}
+                value={penColor}
+                onChange={setPenColor}
+                disallowInput
                 size="xs"
                 maw={120}
                 placeholder="#000000"
-                swatches={[
-                  "#000000",
-                  "#868e96",
-                  "#fa5252",
-                  "#e64980",
-                  "#be4bdb",
-                  "#7950f2",
-                  "#4c6ef5",
-                  "#228be6",
-                  "#15aabf",
-                  "#12b886",
-                  "#40c057",
-                  "#82c91e",
-                  "#fab005",
-                  "#fd7e14",
+                rightSection={<IconPencil size={18} />}
+                swatches={colorSwatches}
+              />
+            </Tooltip>
+            <Tooltip label="Line width" openDelay={300}>
+              <NumberInput
+                value={lineWidth}
+                onChange={(value) => setLineWidth(value as number)}
+                size="xs"
+                leftSection={<IconRulerMeasure size={18} />}
+                maw={80}
+                min={1}
+                max={80}
+                stepHoldDelay={300}
+                stepHoldInterval={(t) => Math.max(1000 / t ** 2, 50)}
+              />
+            </Tooltip>
+            <Divider orientation="vertical" />
+            <Tooltip label="Text font" openDelay={300}>
+              <Select
+                size="xs"
+                leftSection={<IconTypeface size={18} />}
+                maw={160}
+                value={fontFamily}
+                onChange={(value) => {
+                  const v = value as string;
+                  setFontFamily(v);
+                  updateTextAttributes({ fontFamily: v });
+                }}
+                data={[
+                  "Arial",
+                  "Helvetica",
+                  "Times New Roman",
+                  "Georgia",
+                  "Courier New",
+                  "Verdana",
+                  "Comic Sans MS",
                 ]}
               />
             </Tooltip>
-            <Popover withArrow trapFocus>
-              <Popover.Target>
-                <Tooltip label="Line width" openDelay={300}>
-                  <ActionIcon variant="default">
-                    <IconRulerMeasure />
-                  </ActionIcon>
-                </Tooltip>
-              </Popover.Target>
-              <Popover.Dropdown>
-                <Stack gap="xs" w={200}>
-                  <Text size="sm">Line width</Text>
-                  <Slider
-                    min={1}
-                    max={80}
-                    step={1}
-                    value={lineWidth}
-                    onChange={setLineWidth}
-                  />
-                </Stack>
-              </Popover.Dropdown>
-            </Popover>
+            <Tooltip label="Font size" openDelay={300}>
+              <NumberInput
+                value={fontSize}
+                onChange={(value) => {
+                  const v = value as number;
+                  setFontSize(v);
+                  updateTextAttributesDebounced({ fontSize: v });
+                }}
+                size="xs"
+                leftSection={<IconTextSize size={18} />}
+                maw={80}
+                min={6}
+                max={120}
+                stepHoldDelay={300}
+                stepHoldInterval={(t) => Math.max(1000 / t ** 2, 50)}
+              />
+            </Tooltip>
+            <Tooltip label="Text color" openDelay={300}>
+              <ColorInput
+                value={textColor}
+                onChange={(value) => {
+                  setTextColor(value);
+                  updateTextAttributes({ color: value });
+                }}
+                disallowInput
+                withPicker={false}
+                size="xs"
+                maw={120}
+                placeholder="#000000"
+                rightSection={<IconTypography size={18} />}
+                swatches={colorSwatches}
+              />
+            </Tooltip>
             <ActionIcon.Group>
-              <Tooltip label="Bring forward" openDelay={300}>
+              <Tooltip label="Align left" openDelay={300}>
                 <ActionIcon
-                  variant="default"
-                  disabled={!selectedId}
-                  onClick={() => objectLayerRef.current?.bringForward()}
+                  variant={textAlign === "left" ? "filled" : "default"}
+                  onClick={() => {
+                    setTextAlign("left");
+                    updateTextAttributes({ align: "left" });
+                  }}
+                  aria-pressed={textAlign === "left"}
                 >
-                  <IconArrowUp />
+                  <IconAlignLeft size={18} />
                 </ActionIcon>
               </Tooltip>
-              <Tooltip label="Send backward" openDelay={300}>
+              <Tooltip label="Align center" openDelay={300}>
                 <ActionIcon
-                  variant="default"
-                  disabled={!selectedId}
-                  onClick={() => objectLayerRef.current?.sendBackward()}
+                  variant={textAlign === "center" ? "filled" : "default"}
+                  onClick={() => {
+                    setTextAlign("center");
+                    updateTextAttributes({ align: "center" });
+                  }}
+                  aria-pressed={textAlign === "center"}
                 >
-                  <IconArrowDown />
+                  <IconAlignCenter size={18} />
                 </ActionIcon>
               </Tooltip>
-              <Tooltip label="Bring to front" openDelay={300}>
+              <Tooltip label="Align right" openDelay={300}>
                 <ActionIcon
-                  variant="default"
-                  disabled={!selectedId}
-                  onClick={() => objectLayerRef.current?.bringToFront()}
+                  variant={textAlign === "right" ? "filled" : "default"}
+                  onClick={() => {
+                    setTextAlign("right");
+                    updateTextAttributes({ align: "right" });
+                  }}
+                  aria-pressed={textAlign === "right"}
                 >
-                  <IconArrowBarToUp />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Send to back" openDelay={300}>
-                <ActionIcon
-                  variant="default"
-                  disabled={!selectedId}
-                  onClick={() => objectLayerRef.current?.sendToBack()}
-                >
-                  <IconArrowBarToDown />
+                  <IconAlignRight size={18} />
                 </ActionIcon>
               </Tooltip>
             </ActionIcon.Group>
             <Divider orientation="vertical" />
             <ActionIcon.Group>
+              <Tooltip label="Bring forward" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!selectedObject}
+                  onClick={() => objectLayerRef.current?.bringForward()}
+                >
+                  <IconStackForward size={18} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Send backward" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!selectedObject}
+                  onClick={() => objectLayerRef.current?.sendBackward()}
+                >
+                  <IconStackBackward size={18} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Bring to front" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!selectedObject}
+                  onClick={() => objectLayerRef.current?.bringToFront()}
+                >
+                  <IconStackFront size={18} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Send to back" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!selectedObject}
+                  onClick={() => objectLayerRef.current?.sendToBack()}
+                >
+                  <IconStackBack size={18} />
+                </ActionIcon>
+              </Tooltip>
+            </ActionIcon.Group>
+            <ActionIcon.Group>
               <Tooltip label="Delete object" openDelay={300}>
                 <ActionIcon
                   variant="default"
-                  disabled={!selectedId}
+                  disabled={!selectedObject}
                   onClick={() => objectLayerRef.current?.deleteSelected()}
                 >
-                  <IconTrashX />
+                  <IconTrashX size={18} />
                 </ActionIcon>
               </Tooltip>
               <Tooltip label="Delete all drawings" openDelay={300}>
                 <ActionIcon
                   variant="default"
-                  onClick={() => wsRef.current.sendClearDrawings()}
+                  onClick={() => wsRef.current?.sendClearDrawings()}
                 >
-                  <IconPencilX />
+                  <IconPencilX size={18} />
                 </ActionIcon>
               </Tooltip>
               <Tooltip label="Delete all objects" openDelay={300}>
@@ -460,7 +611,7 @@ export default function Room() {
                   variant="default"
                   onClick={() => objectLayerRef.current?.deleteAll()}
                 >
-                  <IconInputX />
+                  <IconInputX size={18} />
                 </ActionIcon>
               </Tooltip>
             </ActionIcon.Group>
@@ -507,7 +658,7 @@ export default function Room() {
               doc={docRef.current}
               objects={objectsRef.current}
               order={orderRef.current!}
-              onSelectionChange={setSelectedId}
+              onSelectionChange={setSelectedObject}
               onRequestEditLatex={(id, text) => {
                 setEditingLatexId(id);
                 setLatexInitial(text ?? "");

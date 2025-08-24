@@ -11,6 +11,13 @@ export type StrokeEvent = {
   color?: string;
 };
 
+export type TextAttributes = {
+  fontSize: number;
+  fontFamily: string;
+  color: string;
+  align: "left" | "center" | "right";
+};
+
 export type ImageObject = {
   id: string;
   type: "image";
@@ -42,10 +49,6 @@ export type TextObject = {
   y: number;
   width: number;
   rotation: number;
-  fontSize: number;
-  fontFamily: string;
-  color: string;
-  align: "left" | "center" | "right";
-};
+} & TextAttributes;
 
 export type CanvasObject = ImageObject | LatexObject | TextObject;

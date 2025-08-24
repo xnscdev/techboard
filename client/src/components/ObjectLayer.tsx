@@ -14,6 +14,7 @@ import type {
   CanvasObject,
   ImageObject,
   LatexObject,
+  TextAttributes,
   TextObject,
 } from "@/util/types.ts";
 import { latexToSvgDataUrl } from "@/util/latex.ts";
@@ -25,7 +26,8 @@ export type ObjectLayerHandle = {
   addImage: (file: File) => void;
   addLatex: (text: string) => void;
   updateLatex: (id: string, text: string) => void;
-  addText: () => void;
+  addText: (attr: TextAttributes) => void;
+  updateText: (id: string, attr: Partial<TextAttributes>) => void;
   clearSelection: () => void;
   bringForward: () => void;
   sendBackward: () => void;
@@ -43,7 +45,8 @@ type ObjectProps = {
   doc: Y.Doc;
   objects: Y.Map<Y.Map<unknown>>;
   order: Y.Array<string>;
-  onSelectionChange?: (id: string | null) => void;
+  onSelectionChange?: (obj: CanvasObject | null) => void;
+  onTextAttributesChange?: (attr: TextAttributes) => void;
   onRequestEditLatex?: (id: string, text: string) => void;
 };
 
@@ -214,7 +217,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         });
       }, "local");
     },
-    addText() {
+    addText(attr: TextAttributes) {
       const id = `txt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const obj: Omit<TextObject, "id"> = {
         type: "text",
@@ -223,10 +226,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         y: 140,
         width: 240,
         rotation: 0,
-        fontSize: 20,
-        fontFamily: "Arial",
-        color: "#000000",
-        align: "center",
+        ...attr,
       };
       doc.transact(() => {
         const m = new Y.Map<unknown>();
@@ -235,6 +235,17 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         order.push([id]);
       }, "local");
       setSelectedId(id);
+    },
+    updateText(id: string, attr: Partial<TextAttributes>) {
+      const m = objects.get(id);
+      if (!m) {
+        return;
+      }
+      const obj = getObjectFromMap<Omit<CanvasObject, "id">>(m);
+      if (obj.type !== "text") {
+        return;
+      }
+      doc.transact(() => setObjectToMap(m, attr), "local");
     },
     clearSelection() {
       setSelectedId(null);
@@ -326,8 +337,8 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
   }, [selectedId, items, isEditingText]);
 
   useEffect(() => {
-    onSelectionChange?.(selectedId);
-  }, [selectedId, onSelectionChange]);
+    onSelectionChange?.(selectedObject);
+  }, [selectedObject, onSelectionChange]);
 
   const stageStyle: CSSProperties = useMemo(
     () => ({
