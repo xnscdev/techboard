@@ -654,6 +654,7 @@ export default function Room() {
             files
               .filter((file) => file.type.startsWith("image/"))
               .forEach((file) => objectLayerRef.current?.addImage(file));
+            setTool("select");
           }}
         >
           <canvas
