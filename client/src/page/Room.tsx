@@ -45,7 +45,7 @@ import {
   IconTypography,
 } from "@tabler/icons-react";
 import * as Y from "yjs";
-import { useDebouncedCallback, useDisclosure } from "@mantine/hooks";
+import { clamp, useDebouncedCallback, useDisclosure } from "@mantine/hooks";
 import { createWS, type WS } from "@/util/ws.ts";
 import type {
   CanvasObject,
@@ -81,6 +81,17 @@ const colorSwatches = [
   "#fab005",
   "#fd7e14",
 ];
+
+function toClampedNumber(value: string | number, min: number, max: number) {
+  if (typeof value === "string") {
+    const n = Number(value);
+    if (isNaN(n)) {
+      return min;
+    }
+    return clamp(n, min, max);
+  }
+  return clamp(value, min, max);
+}
 
 export default function Room() {
   const { roomId } = useParams();
@@ -482,7 +493,7 @@ export default function Room() {
               <NumberInput
                 value={fontSize}
                 onChange={(value) => {
-                  const v = value as number;
+                  const v = toClampedNumber(value, 6, 120);
                   setFontSize(v);
                   updateTextAttributesDebounced({ fontSize: v });
                 }}
@@ -500,10 +511,9 @@ export default function Room() {
                 value={textColor}
                 onChange={(value) => {
                   setTextColor(value);
-                  updateTextAttributes({ color: value });
+                  updateTextAttributesDebounced({ color: value });
                 }}
                 disallowInput
-                withPicker={false}
                 size="xs"
                 maw={120}
                 placeholder="#000000"

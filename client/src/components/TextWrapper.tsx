@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { Html } from "react-konva-utils";
+import { useDebouncedCallback } from "@mantine/hooks";
 
 type TextWrapperProps = {
   obj: TextObject;
@@ -36,6 +37,8 @@ export default function TextWrapper({
   const objStr = JSON.stringify(obj);
 
   useEffect(() => onEditChange(isEditing), [isEditing, onEditChange]);
+
+  const saveDebounced = useDebouncedCallback(saveText, 400);
 
   useEffect(() => {
     if (!taRef.current) {
@@ -149,9 +152,11 @@ export default function TextWrapper({
             ref={taRef}
             defaultValue={obj.text}
             style={editStyle}
+            autoFocus
             onChange={(e) => {
               e.currentTarget.style.height = "auto";
               e.currentTarget.style.height = `${e.currentTarget.scrollHeight + 3}px`;
+              saveDebounced(e.currentTarget.value);
             }}
           />
         </Html>
