@@ -361,8 +361,8 @@ export default function Room() {
           Leave
         </Button>
       </Group>
-      <Box bd="1px solid #eee" bdrs={8} p={8} bg="#fafafa">
-        <ScrollArea type="auto" scrollHideDelay={0}>
+      <Box bd="1px solid #eee" bdrs={8} bg="#fafafa">
+        <ScrollArea type="auto" scrollHideDelay={0} p={10}>
           <Group gap="xs" wrap="nowrap">
             <ActionIcon.Group>
               <Tooltip label="Select" openDelay={300}>
