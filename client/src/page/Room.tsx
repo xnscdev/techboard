@@ -33,6 +33,7 @@ import {
   IconPencil,
   IconPencilX,
   IconPhotoPlus,
+  IconPhotoUp,
   IconPointer,
   IconRulerMeasure,
   IconStackBack,
@@ -60,6 +61,7 @@ import ObjectLayer, {
   type ObjectLayerHandle,
 } from "@/components/ObjectLayer.tsx";
 import EditEquationModal from "@/components/EditEquationModal.tsx";
+import InsertImageModel from "@/components/InsertImageModal.tsx";
 
 const wsUrl: string = import.meta.env.VITE_WS_URL ?? "http://localhost:5174";
 const boardWidth = 2400;
@@ -130,6 +132,8 @@ export default function Room() {
   const [showDragOverlay, setShowDragOverlay] = useState(false);
 
   const [latexModalOpened, { open: latexModalOpen, close: latexModalClose }] =
+    useDisclosure(false);
+  const [imageModalOpened, { open: imageModalOpen, close: imageModalClose }] =
     useDisclosure(false);
   const [latexInitial, setLatexInitial] = useState<string>("");
   const [editingLatexId, setEditingLatexId] = useState<string | null>(null);
@@ -396,8 +400,13 @@ export default function Room() {
             </ActionIcon.Group>
             <ActionIcon.Group>
               <Tooltip label="Insert image" openDelay={300}>
-                <ActionIcon component="label" variant="default">
+                <ActionIcon variant="default" onClick={() => imageModalOpen()}>
                   <IconPhotoPlus size={18} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Upload image" openDelay={300}>
+                <ActionIcon component="label" variant="default">
+                  <IconPhotoUp size={18} />
                   <input
                     type="file"
                     accept="image/*"
@@ -726,6 +735,15 @@ export default function Room() {
         initial={latexInitial}
         title={editingLatexId ? "Edit LaTeX Equation" : "Insert LaTeX Equation"}
         confirmLabel={editingLatexId ? "Update" : "Insert"}
+      />
+      <InsertImageModel
+        opened={imageModalOpened}
+        onCancel={imageModalClose}
+        onConfirm={(url) => {
+          objectLayerRef.current?.addImageUrl(url);
+          imageModalClose();
+          setTool("select");
+        }}
       />
     </Stack>
   );

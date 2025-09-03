@@ -24,6 +24,7 @@ import TextWrapper from "@/components/TextWrapper.tsx";
 
 export type ObjectLayerHandle = {
   addImage: (file: File) => void;
+  addImageUrl: (url: string) => void;
   addLatex: (text: string) => void;
   updateLatex: (id: string, text: string) => void;
   addText: (attr: TextAttributes) => void;
@@ -63,9 +64,12 @@ function getObjectFromMap<T = Record<string, unknown>>(m: Y.Map<unknown>) {
   return Object.fromEntries(m.entries()) as T;
 }
 
-function loadHTMLImage(src: string): Promise<HTMLImageElement> {
+function loadHTMLImage(src: string, cors: boolean): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    if (cors) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
@@ -115,8 +119,8 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         setSelectedId(null);
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   });
 
   useEffect(() => {
@@ -139,43 +143,50 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     return () => doc.off("update", onUpdate);
   }, [doc, objects, order]);
 
+  const addImageFromUrl = async (url: string, cors: boolean) => {
+    const el = await loadHTMLImage(url, cors);
+    const { width, height } = scaleImage(el, 20, 1000);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(el, 0, 0, width, height);
+    let newUrl: string;
+    try {
+      newUrl = canvas.toDataURL("image/webp", 0.8);
+    } catch {
+      newUrl = canvas.toDataURL("image/jpeg", 0.85);
+    }
+    canvas.remove();
+    const id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const obj: Omit<ImageObject, "id"> = {
+      type: "image",
+      src: newUrl,
+      x: 120,
+      y: 120,
+      width,
+      height,
+      rotation: 0,
+    };
+    doc.transact(() => {
+      const m = new Y.Map<unknown>();
+      setObjectToMap(m, obj);
+      objects.set(id, m);
+      order.push([id]);
+    }, "local");
+    setSelectedId(id);
+  };
+
   useImperativeHandle(ref, () => ({
     async addImage(file: File) {
       if (!file) {
         return;
       }
       const objectUrl = URL.createObjectURL(file);
-      const el = await loadHTMLImage(objectUrl);
-      const { width, height } = scaleImage(el, 20, 1000);
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(el, 0, 0, width, height);
-      let url: string;
-      try {
-        url = canvas.toDataURL("image/webp", 0.8);
-      } catch {
-        url = canvas.toDataURL("image/jpeg", 0.85);
-      }
-      canvas.remove();
-      const id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const obj: Omit<ImageObject, "id"> = {
-        type: "image",
-        src: url,
-        x: 120,
-        y: 120,
-        width,
-        height,
-        rotation: 0,
-      };
-      doc.transact(() => {
-        const m = new Y.Map<unknown>();
-        setObjectToMap(m, obj);
-        objects.set(id, m);
-        order.push([id]);
-      }, "local");
-      setSelectedId(id);
+      await addImageFromUrl(objectUrl, false);
+    },
+    async addImageUrl(url: string) {
+      await addImageFromUrl(url, true);
     },
     async addLatex(text: string) {
       text = text.trim();
@@ -186,7 +197,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         display: true,
         encoding: "base64",
       });
-      const el = await loadHTMLImage(url);
+      const el = await loadHTMLImage(url, false);
       const { width, height } = scaleImage(el, 20);
       const id = `eq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const obj: Omit<LatexObject, "id"> = {
@@ -221,7 +232,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         display: true,
         encoding: "base64",
       });
-      const el = await loadHTMLImage(url);
+      const el = await loadHTMLImage(url, false);
       const { width, height } = scaleImage(el, 20);
       doc.transact(() => {
         setObjectToMap(m, {
