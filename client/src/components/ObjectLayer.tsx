@@ -113,7 +113,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
           objects.delete(selectedId);
           const idx = order.toArray().indexOf(selectedId);
           order.delete(idx, 1);
-        });
+        }, "local");
         setSelectedId(null);
       }
     };
@@ -285,7 +285,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         }
         order.delete(idx, 1);
         order.insert(idx + 1, [selectedId]);
-      });
+      }, "local");
     },
     sendBackward() {
       if (!selectedId) {
@@ -298,7 +298,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         }
         order.delete(idx, 1);
         order.insert(idx - 1, [selectedId]);
-      });
+      }, "local");
     },
     bringToFront() {
       if (!selectedId) {
@@ -311,7 +311,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         }
         order.delete(idx, 1);
         order.push([selectedId]);
-      });
+      }, "local");
     },
     sendToBack() {
       if (!selectedId) {
@@ -321,7 +321,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         const idx = order.toArray().indexOf(selectedId);
         order.delete(idx, 1);
         order.unshift([selectedId]);
-      });
+      }, "local");
     },
     deleteSelected() {
       if (!selectedId) {
@@ -331,14 +331,14 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         objects.delete(selectedId);
         const idx = order.toArray().indexOf(selectedId);
         order.delete(idx, 1);
-      });
+      }, "local");
       setSelectedId(null);
     },
     deleteAll() {
       doc.transact(() => {
         objects.clear();
         order.delete(0, order.length);
-      });
+      }, "local");
       setSelectedId(null);
     },
   }));
