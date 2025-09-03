@@ -25,7 +25,6 @@ import getPlacer from "@/util/placer.ts";
 
 export type ObjectLayerHandle = {
   addImage: (file: File) => void;
-  addImageUrl: (url: string) => void;
   addLatex: (text: string) => void;
   updateLatex: (id: string, text: string) => void;
   addText: (text: string, attr: TextAttributes) => void;
@@ -65,12 +64,9 @@ function getObjectFromMap<T = Record<string, unknown>>(m: Y.Map<unknown>) {
   return Object.fromEntries(m.entries()) as T;
 }
 
-function loadHTMLImage(src: string, cors: boolean): Promise<HTMLImageElement> {
+function loadHTMLImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    if (cors) {
-      img.crossOrigin = "anonymous";
-    }
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
@@ -145,8 +141,8 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     return () => doc.off("update", onUpdate);
   }, [doc, objects, order]);
 
-  const addImageFromUrl = async (url: string, cors: boolean) => {
-    const el = await loadHTMLImage(url, cors);
+  const addImageFromUrl = async (url: string) => {
+    const el = await loadHTMLImage(url);
     const { width, height } = scaleImage(el, 20, 1000);
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -186,10 +182,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         return;
       }
       const objectUrl = URL.createObjectURL(file);
-      await addImageFromUrl(objectUrl, false);
-    },
-    async addImageUrl(url: string) {
-      await addImageFromUrl(url, true);
+      await addImageFromUrl(objectUrl);
     },
     async addLatex(text: string) {
       text = text.trim();
@@ -200,7 +193,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         display: true,
         encoding: "base64",
       });
-      const el = await loadHTMLImage(url, false);
+      const el = await loadHTMLImage(url);
       const { width, height } = scaleImage(el, 20);
       const id = `eq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const { x, y } = placer.current();
@@ -236,7 +229,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         display: true,
         encoding: "base64",
       });
-      const el = await loadHTMLImage(url, false);
+      const el = await loadHTMLImage(url);
       const { width, height } = scaleImage(el, 20);
       doc.transact(() => {
         setObjectToMap(m, {

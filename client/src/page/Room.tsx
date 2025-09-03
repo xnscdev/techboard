@@ -33,7 +33,6 @@ import {
   IconPencil,
   IconPencilX,
   IconPhotoPlus,
-  IconPhotoUp,
   IconPointer,
   IconRulerMeasure,
   IconStackBack,
@@ -61,7 +60,6 @@ import ObjectLayer, {
   type ObjectLayerHandle,
 } from "@/components/ObjectLayer.tsx";
 import EditEquationModal from "@/components/EditEquationModal.tsx";
-import InsertImageModel from "@/components/InsertImageModal.tsx";
 
 const wsUrl: string = import.meta.env.VITE_WS_URL ?? "http://localhost:5174";
 const boardWidth = 2400;
@@ -132,8 +130,6 @@ export default function Room() {
   const [showDragOverlay, setShowDragOverlay] = useState(false);
 
   const [latexModalOpened, { open: latexModalOpen, close: latexModalClose }] =
-    useDisclosure(false);
-  const [imageModalOpened, { open: imageModalOpen, close: imageModalClose }] =
     useDisclosure(false);
   const [latexInitial, setLatexInitial] = useState<string>("");
   const [editingLatexId, setEditingLatexId] = useState<string | null>(null);
@@ -263,7 +259,21 @@ export default function Room() {
       ) {
         return;
       }
-      if (e.clipboardData && e.clipboardData.types.includes("text/plain")) {
+      if (!e.clipboardData) {
+        return;
+      }
+      const items = Array.from(e.clipboardData.items);
+      const image = items.find((item) => item.type.startsWith("image/"));
+      if (image) {
+        const file = image.getAsFile();
+        if (file) {
+          e.preventDefault();
+          objectLayerRef.current?.addImage(file);
+          setTool("select");
+          return;
+        }
+      }
+      if (e.clipboardData.types.includes("text/plain")) {
         const content = e.clipboardData.getData("text/plain").trim();
         const limit = 5000;
         const text = content.length > limit ? content.slice(0, limit) : content;
@@ -440,13 +450,8 @@ export default function Room() {
             </ActionIcon.Group>
             <ActionIcon.Group>
               <Tooltip label="Insert image" openDelay={300}>
-                <ActionIcon variant="default" onClick={() => imageModalOpen()}>
-                  <IconPhotoPlus size={18} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Upload image" openDelay={300}>
                 <ActionIcon component="label" variant="default">
-                  <IconPhotoUp size={18} />
+                  <IconPhotoPlus size={18} />
                   <input
                     type="file"
                     accept="image/*"
@@ -775,15 +780,6 @@ export default function Room() {
         initial={latexInitial}
         title={editingLatexId ? "Edit LaTeX Equation" : "Insert LaTeX Equation"}
         confirmLabel={editingLatexId ? "Update" : "Insert"}
-      />
-      <InsertImageModel
-        opened={imageModalOpened}
-        onCancel={imageModalClose}
-        onConfirm={(url) => {
-          objectLayerRef.current?.addImageUrl(url);
-          imageModalClose();
-          setTool("select");
-        }}
       />
     </Stack>
   );
