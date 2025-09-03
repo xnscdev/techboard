@@ -247,6 +247,36 @@ export default function Room() {
     }
   }, [selectedObject]);
 
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable ||
+        target.closest("[contenteditable='true']") ||
+        target.closest("input") ||
+        target.closest("textarea")
+      ) {
+        return;
+      }
+      if (e.clipboardData && e.clipboardData.types.includes("text/plain")) {
+        const content = e.clipboardData.getData("text/plain").trim();
+        const limit = 5000;
+        const text = content.length > limit ? content.slice(0, limit) : content;
+        if (text) {
+          e.preventDefault();
+          pasteText(text);
+        }
+      }
+    };
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  });
+
   const flush = () => {
     const segs = pendingSegmentsRef.current;
     pendingSegmentsRef.current = [];
@@ -330,6 +360,16 @@ export default function Room() {
     updateTextAttributes,
     200,
   );
+
+  const pasteText = useDebouncedCallback((text: string) => {
+    objectLayerRef.current?.addText(text, {
+      fontFamily,
+      fontSize,
+      color: textColor,
+      align: textAlign,
+    });
+    setTool("select");
+  }, 300);
 
   return (
     <Stack p="md" gap="md" h="100vh">
@@ -439,7 +479,7 @@ export default function Room() {
                 <ActionIcon
                   variant="default"
                   onClick={() => {
-                    objectLayerRef.current?.addText({
+                    objectLayerRef.current?.addText("Double-click to edit", {
                       fontFamily,
                       fontSize,
                       color: textColor,
@@ -708,7 +748,7 @@ export default function Room() {
                 pointerEvents: "none",
                 zIndex: 5,
                 border: "2px dashed #339af0",
-                background: "rgba(51,154,240,0.06)",
+                background: "rgb(51, 154, 240, 0.06)",
                 borderRadius: 8,
               }}
               aria-hidden

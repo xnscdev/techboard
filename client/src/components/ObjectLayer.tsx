@@ -21,13 +21,14 @@ import { latexToSvgDataUrl } from "@/util/latex.ts";
 import { scaleImage, scaleResize } from "@/util/size.ts";
 import ImageWrapper from "@/components/ImageWrapper.tsx";
 import TextWrapper from "@/components/TextWrapper.tsx";
+import getPlacer from "@/util/placer.ts";
 
 export type ObjectLayerHandle = {
   addImage: (file: File) => void;
   addImageUrl: (url: string) => void;
   addLatex: (text: string) => void;
   updateLatex: (id: string, text: string) => void;
-  addText: (attr: TextAttributes) => void;
+  addText: (text: string, attr: TextAttributes) => void;
   updateText: (id: string, attr: Partial<TextAttributes>) => void;
   clearSelection: () => void;
   bringForward: () => void;
@@ -95,6 +96,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
   const [isEditingText, setIsEditingText] = useState<boolean>(false);
   const trRef = useRef<Konva.Transformer>(null);
   const nodeRefs = useRef<Record<string, Konva.Node | null>>({});
+  const placer = useRef(getPlacer());
 
   const selectedObject = useMemo(
     () =>
@@ -159,11 +161,12 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     }
     canvas.remove();
     const id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const { x, y } = placer.current();
     const obj: Omit<ImageObject, "id"> = {
       type: "image",
       src: newUrl,
-      x: 120,
-      y: 120,
+      x,
+      y,
       width,
       height,
       rotation: 0,
@@ -200,12 +203,13 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       const el = await loadHTMLImage(url, false);
       const { width, height } = scaleImage(el, 20);
       const id = `eq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const { x, y } = placer.current();
       const obj: Omit<LatexObject, "id"> = {
         type: "latex",
         text,
         src: url,
-        x: 140,
-        y: 140,
+        x,
+        y,
         width,
         height,
         rotation: 0,
@@ -243,13 +247,14 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         });
       }, "local");
     },
-    addText(attr: TextAttributes) {
+    addText(text: string, attr: TextAttributes) {
       const id = `txt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const { x, y } = placer.current();
       const obj: Omit<TextObject, "id"> = {
         type: "text",
-        text: "Double-click to edit",
-        x: 140,
-        y: 140,
+        text,
+        x,
+        y,
         width: 240,
         rotation: 0,
         ...attr,
