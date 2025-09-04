@@ -3,7 +3,7 @@ import express from "express";
 import { Server } from "socket.io";
 import { randomUUID } from "crypto";
 import * as Y from "yjs";
-import { RoomState, StrokeEvent } from "@/types";
+import { RoomState } from "@/types";
 
 const app = express();
 const httpServer = createServer(app);
@@ -20,7 +20,6 @@ io.on("connection", (socket) => {
     const id = randomUUID().slice(0, 8);
     const room: RoomState = {
       id,
-      strokes: [],
       doc: new Y.Doc(),
       clients: new Set(),
     };
@@ -39,19 +38,10 @@ io.on("connection", (socket) => {
     joinedRoom = room;
     room.clients.add(socket.id);
     socket.join(room.id);
-    socket.emit("initCanvas", room.strokes);
     const update = Y.encodeStateAsUpdate(room.doc);
     socket.emit("initDoc", update);
     callback?.(true);
     console.log(`joinRoom: ${socket.id}: joined room ${roomId}`);
-  });
-
-  socket.on("draw", (payload: StrokeEvent) => {
-    if (!joinedRoom) {
-      return;
-    }
-    joinedRoom.strokes.push(payload);
-    socket.to(joinedRoom.id).emit("draw", payload);
   });
 
   socket.on("updateDoc", (update: ArrayBuffer) => {
@@ -61,14 +51,6 @@ io.on("connection", (socket) => {
     const u8 = new Uint8Array(update);
     Y.applyUpdate(joinedRoom.doc, u8);
     socket.to(joinedRoom.id).emit("updateDoc", u8);
-  });
-
-  socket.on("clearDrawings", () => {
-    if (!joinedRoom) {
-      return;
-    }
-    joinedRoom.strokes = [];
-    io.to(joinedRoom.id).emit("clearDrawings");
   });
 
   socket.on("disconnect", () => {

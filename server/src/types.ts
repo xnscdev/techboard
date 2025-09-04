@@ -15,7 +15,6 @@ export type StrokeEvent = {
 
 export type RoomState = {
   id: string;
-  strokes: StrokeEvent[];
   doc: Y.Doc;
   clients: Set<string>;
 };

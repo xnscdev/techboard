@@ -13,7 +13,7 @@ export function scaleSize(
     scale = minSide / minDim;
   }
   if (maxSide && scale > maxSide / maxDim) {
-    scale = Math.max(scale, maxSide / maxDim);
+    scale = maxSide / maxDim;
   }
   width = Math.max(1, Math.round(width * scale));
   height = Math.max(1, Math.round(height * scale));

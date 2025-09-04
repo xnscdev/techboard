@@ -45,6 +45,7 @@ import {
   IconTypography,
 } from "@tabler/icons-react";
 import * as Y from "yjs";
+import { YArrayEvent } from "yjs";
 import { clamp, useDebouncedCallback, useDisclosure } from "@mantine/hooks";
 import { createWS, type WS } from "@/util/ws.ts";
 import type {
@@ -106,6 +107,7 @@ export default function Room() {
   const docRef = useRef<Y.Doc | null>(null);
   const objectsRef = useRef<Y.Map<Y.Map<unknown>> | null>(null);
   const orderRef = useRef<Y.Array<string> | null>(null);
+  const strokesRef = useRef<Y.Array<StrokeEvent> | null>(null);
 
   const drawingRef = useRef(false);
   const lastPosRef = useRef<Point | null>(null);
@@ -146,46 +148,11 @@ export default function Room() {
     const ws = createWS(wsUrl);
     wsRef.current = ws;
 
-    const clearCanvas = (
-      ctx: CanvasRenderingContext2D,
-      canvas: HTMLCanvasElement,
-    ) => {
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.restore();
-    };
-
-    const onInit = (strokes: StrokeEvent[]) => {
-      if (!ctxRef.current) {
-        return;
-      }
-      const canvas = canvasRef.current!;
-      const ctx = ctxRef.current!;
-      clearCanvas(ctx, canvas);
-      replay(ctx, strokes);
-    };
-
-    const onDraw = (stroke: StrokeEvent) => {
-      if (!ctxRef.current) {
-        return;
-      }
-      drawStroke(ctxRef.current, stroke);
-    };
-
-    const onClearDrawings = () => {
-      if (!ctxRef.current) {
-        return;
-      }
-      const canvas = canvasRef.current!;
-      const ctx = ctxRef.current!;
-      clearCanvas(ctx, canvas);
-    };
-
     const doc = new Y.Doc();
     docRef.current = doc;
     objectsRef.current = doc.getMap("objects");
     orderRef.current = doc.getArray("order");
+    strokesRef.current = doc.getArray("strokes");
 
     const onLocalUpdateDoc = (update: Uint8Array, origin: unknown) => {
       if (origin === "remote") {
@@ -194,26 +161,40 @@ export default function Room() {
       wsRef.current?.sendUpdateDoc(update);
     };
     doc.on("update", onLocalUpdateDoc);
-
-    ws.onInitCanvas(onInit);
-    ws.onDraw(onDraw);
-    ws.onClearDrawings(onClearDrawings);
     ws.onInitDoc((u) => Y.applyUpdate(doc, u, "remote"));
     ws.onUpdateDoc((u) => Y.applyUpdate(doc, u, "remote"));
 
-    (async () => {
-      const ok = await ws.joinRoom(roomId);
+    const onStrokesChange = (e: YArrayEvent<StrokeEvent>) => {
+      if (e.transaction.local || !ctxRef.current || !canvasRef.current) {
+        return;
+      }
+      let redraw = false;
+      for (const d of e.changes.delta) {
+        if (d.insert) {
+          for (const stroke of d.insert) {
+            drawStroke(ctxRef.current, stroke);
+          }
+        } else if (d.delete) {
+          redraw = true;
+          break;
+        }
+      }
+      if (redraw) {
+        clearCanvas(ctxRef.current, canvasRef.current);
+        replay(ctxRef.current, strokesRef.current?.toArray() ?? []);
+      }
+    };
+    strokesRef.current.observe(onStrokesChange);
+
+    ws.joinRoom(roomId).then((ok) => {
       if (!ok) {
         navigate("/");
         return;
       }
       setWsReady(true);
-    })();
+    });
 
     return () => {
-      ws.socket.removeListener("initCanvas", onInit);
-      ws.socket.removeListener("draw", onDraw);
-      ws.socket.removeAllListeners("clearDrawings");
       ws.socket.removeAllListeners("initDoc");
       ws.socket.removeAllListeners("updateDoc");
       docRef.current?.off("update", onLocalUpdateDoc);
@@ -221,6 +202,8 @@ export default function Room() {
       docRef.current = null;
       objectsRef.current = null;
       orderRef.current = null;
+      strokesRef.current?.unobserve(onStrokesChange);
+      strokesRef.current = null;
       setWsReady(false);
       ws.socket.disconnect();
       wsRef.current = null;
@@ -287,18 +270,37 @@ export default function Room() {
   });
 
   const flushStrokes = useDebouncedCallback(() => {
-    const segs = pendingSegmentsRef.current;
-    pendingSegmentsRef.current = [];
-    if (segs.length && wsReady) {
-      const payload: StrokeEvent = {
-        segments: segs,
+    if (pendingSegmentsRef.current.length && docRef.current && wsReady) {
+      const stroke: StrokeEvent = {
+        segments: pendingSegmentsRef.current,
         tool,
         lineWidth,
         color: penColor,
       };
-      wsRef.current?.sendDraw(payload);
+      docRef.current.transact(
+        () => strokesRef.current?.push([stroke]),
+        "local",
+      );
+      pendingSegmentsRef.current = [];
     }
   }, 20);
+
+  const clearCanvas = (
+    ctx: CanvasRenderingContext2D,
+    canvas: HTMLCanvasElement,
+  ) => {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  };
+
+  const clearDrawings = () => {
+    docRef.current?.transact(() => {
+      strokesRef.current?.delete(0, strokesRef.current?.length ?? 0);
+    }, "local");
+    clearCanvas(ctxRef.current!, canvasRef.current!);
+  };
 
   const getPos = (e: PointerEvent): Point => {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -338,15 +340,7 @@ export default function Room() {
     }
     drawingRef.current = false;
     lastPosRef.current = null;
-    if (pendingSegmentsRef.current.length && wsReady) {
-      wsRef.current?.sendDraw({
-        segments: pendingSegmentsRef.current,
-        tool,
-        lineWidth,
-        color: penColor,
-      });
-      pendingSegmentsRef.current = [];
-    }
+    flushStrokes.flush();
   };
 
   const updateTextAttributes = (attr: Partial<TextAttributes>) => {
@@ -655,10 +649,7 @@ export default function Room() {
                 </ActionIcon>
               </Tooltip>
               <Tooltip label="Delete all drawings" openDelay={300}>
-                <ActionIcon
-                  variant="default"
-                  onClick={() => wsRef.current?.sendClearDrawings()}
-                >
+                <ActionIcon variant="default" onClick={clearDrawings}>
                   <IconPencilX size={18} />
                 </ActionIcon>
               </Tooltip>
