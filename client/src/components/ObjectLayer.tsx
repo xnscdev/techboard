@@ -143,9 +143,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
 
   const addImageFromUrl = async (url: string) => {
     const el = await loadHTMLImage(url);
-    console.log(el.naturalWidth, el.naturalHeight);
     const { width, height } = scaleImage(el, 20, 1600);
-    console.log(width, height);
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;

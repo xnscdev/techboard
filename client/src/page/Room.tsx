@@ -25,6 +25,8 @@ import {
   IconAlignCenter,
   IconAlignLeft,
   IconAlignRight,
+  IconArrowBackUp,
+  IconArrowForwardUp,
   IconCheck,
   IconCopy,
   IconEraser,
@@ -108,6 +110,7 @@ export default function Room() {
   const objectsRef = useRef<Y.Map<Y.Map<unknown>> | null>(null);
   const orderRef = useRef<Y.Array<string> | null>(null);
   const strokesRef = useRef<Y.Array<StrokeEvent> | null>(null);
+  const undoRef = useRef<Y.UndoManager | null>(null);
 
   const drawingRef = useRef(false);
   const lastPosRef = useRef<Point | null>(null);
@@ -135,6 +138,9 @@ export default function Room() {
   const [latexInitial, setLatexInitial] = useState<string>("");
   const [editingLatexId, setEditingLatexId] = useState<string | null>(null);
 
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
   useEffect(() => {
     const canvas = canvasRef.current!;
     ctxRef.current = setupCanvas(canvas, boardWidth, boardHeight);
@@ -154,6 +160,18 @@ export default function Room() {
     orderRef.current = doc.getArray("order");
     strokesRef.current = doc.getArray("strokes");
 
+    const handleStackChanged = () => {
+      setCanUndo(undoRef.current?.canUndo() ?? false);
+      setCanRedo(undoRef.current?.canRedo() ?? false);
+    };
+    const undoManager = new Y.UndoManager(doc, {
+      trackedOrigins: new Set(["local"]),
+    });
+    undoManager.on("stack-cleared", handleStackChanged);
+    undoManager.on("stack-item-added", handleStackChanged);
+    undoManager.on("stack-item-popped", handleStackChanged);
+    undoRef.current = undoManager;
+
     const onLocalUpdateDoc = (update: Uint8Array, origin: unknown) => {
       if (origin === "remote") {
         return;
@@ -165,7 +183,11 @@ export default function Room() {
     ws.onUpdateDoc((u) => Y.applyUpdate(doc, u, "remote"));
 
     const onStrokesChange = (e: YArrayEvent<StrokeEvent>) => {
-      if (e.transaction.local || !ctxRef.current || !canvasRef.current) {
+      if (
+        e.transaction.origin === "local" ||
+        !ctxRef.current ||
+        !canvasRef.current
+      ) {
         return;
       }
       let redraw = false;
@@ -204,6 +226,11 @@ export default function Room() {
       orderRef.current = null;
       strokesRef.current?.unobserve(onStrokesChange);
       strokesRef.current = null;
+      undoRef.current?.off("stack-cleared", handleStackChanged);
+      undoRef.current?.off("stack-item-added", handleStackChanged);
+      undoRef.current?.off("stack-item-popped", handleStackChanged);
+      undoRef.current?.destroy();
+      undoRef.current = null;
       setWsReady(false);
       ws.socket.disconnect();
       wsRef.current = null;
@@ -600,6 +627,26 @@ export default function Room() {
               </Tooltip>
             </ActionIcon.Group>
             <Divider orientation="vertical" />
+            <ActionIcon.Group>
+              <Tooltip label="Undo" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!canUndo}
+                  onClick={() => undoRef.current?.undo()}
+                >
+                  <IconArrowBackUp size={18} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Redo" openDelay={300}>
+                <ActionIcon
+                  variant="default"
+                  disabled={!canRedo}
+                  onClick={() => undoRef.current?.redo()}
+                >
+                  <IconArrowForwardUp size={18} />
+                </ActionIcon>
+              </Tooltip>
+            </ActionIcon.Group>
             <ActionIcon.Group>
               <Tooltip label="Bring forward" openDelay={300}>
                 <ActionIcon
