@@ -110,7 +110,6 @@ export default function Room() {
   const drawingRef = useRef(false);
   const lastPosRef = useRef<Point | null>(null);
   const pendingSegmentsRef = useRef<Segment[]>([]);
-  const flushTimerRef = useRef<number | null>(null);
   const [tool, setTool] = useState<Tool>("select");
 
   const [penColor, setPenColor] = useState<string>("#000000");
@@ -287,7 +286,7 @@ export default function Room() {
     return () => document.removeEventListener("paste", handlePaste);
   });
 
-  const flush = () => {
+  const flushStrokes = useDebouncedCallback(() => {
     const segs = pendingSegmentsRef.current;
     pendingSegmentsRef.current = [];
     if (segs.length && wsReady) {
@@ -299,17 +298,7 @@ export default function Room() {
       };
       wsRef.current?.sendDraw(payload);
     }
-  };
-
-  const scheduleFlush = () => {
-    if (flushTimerRef.current !== null) {
-      return;
-    }
-    flushTimerRef.current = window.setTimeout(() => {
-      flushTimerRef.current = null;
-      flush();
-    }, 20);
-  };
+  }, 20);
 
   const getPos = (e: PointerEvent): Point => {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -339,7 +328,7 @@ export default function Room() {
       color: penColor,
     });
     pendingSegmentsRef.current.push(seg);
-    scheduleFlush();
+    flushStrokes();
     lastPosRef.current = curr;
   };
 
