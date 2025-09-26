@@ -189,7 +189,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       if (!text) {
         return;
       }
-      const url = latexToSvgDataUrl(text, {
+      const url = await latexToSvgDataUrl(text, {
         display: true,
         encoding: "base64",
       });
@@ -225,7 +225,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       if (obj.type !== "latex") {
         return;
       }
-      const url = latexToSvgDataUrl(text, {
+      const url = await latexToSvgDataUrl(text, {
         display: true,
         encoding: "base64",
       });

@@ -1,16 +1,42 @@
-import { mathjax } from "mathjax-full/js/mathjax.js";
-import { TeX } from "mathjax-full/js/input/tex.js";
-import { AllPackages } from "mathjax-full/js/input/tex/AllPackages.js";
-import { SVG } from "mathjax-full/js/output/svg.js";
-import { liteAdaptor } from "mathjax-full/js/adaptors/liteAdaptor.js";
-import { RegisterHTMLHandler } from "mathjax-full/js/handlers/html.js";
+import type { MathJaxDocument } from "mathjax-full/js/mathjax.js";
+import type { AdaptorInstance } from "mathjax-full/js/adaptors/liteAdaptor.js";
 
-const adaptor = liteAdaptor();
-RegisterHTMLHandler(adaptor);
+let mathJaxPromise: Promise<{
+  mj: MathJaxDocument;
+  adaptor: AdaptorInstance;
+}> | null = null;
 
-const tex = new TeX({ packages: AllPackages });
-const svg = new SVG({ fontCache: "none" });
-const mj = mathjax.document("", { InputJax: tex, OutputJax: svg });
+async function initMathJax() {
+  async function loadMathJax() {
+    const [
+      { mathjax },
+      { TeX },
+      { AllPackages },
+      { SVG },
+      { liteAdaptor },
+      { RegisterHTMLHandler },
+    ] = await Promise.all([
+      import("mathjax-full/js/mathjax.js"),
+      import("mathjax-full/js/input/tex.js"),
+      import("mathjax-full/js/input/tex/AllPackages.js"),
+      import("mathjax-full/js/output/svg.js"),
+      import("mathjax-full/js/adaptors/liteAdaptor.js"),
+      import("mathjax-full/js/handlers/html.js"),
+    ]);
+    const adaptor = liteAdaptor();
+    RegisterHTMLHandler(adaptor);
+    const tex = new TeX({ packages: AllPackages });
+    const svg = new SVG({ fontCache: "none" });
+    const mj = mathjax.document("", { InputJax: tex, OutputJax: svg });
+    console.log("MathJax loaded");
+    return { mj, adaptor };
+  }
+
+  if (!mathJaxPromise) {
+    mathJaxPromise = loadMathJax();
+  }
+  return mathJaxPromise;
+}
 
 function extractSvgString(html: string) {
   const m = html.match(/<svg[\s\S]*?<\/svg>/i);
@@ -36,11 +62,12 @@ function toDataUrl(svg: string, mode: "base64" | "utf8" = "base64") {
   return `data:image/svg+xml;base64,${base64}`;
 }
 
-export function latexToSvgDataUrl(
+export async function latexToSvgDataUrl(
   latex: string,
   opts?: { display?: boolean; encoding?: "base64" | "utf8" },
 ) {
   const { display = false, encoding = "base64" } = opts || {};
+  const { mj, adaptor } = await initMathJax();
   const node = mj.convert(latex, { display });
   const container = adaptor.outerHTML(node);
   const svg = extractSvgString(container);

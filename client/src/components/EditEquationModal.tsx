@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Group, Modal, Stack, Text, Textarea } from "@mantine/core";
 import { latexToSvgDataUrl } from "@/util/latex.ts";
 
@@ -21,6 +21,7 @@ export default function EditEquationModal({
 }: EditEquationModalProps) {
   const [text, setText] = useState(initial.trim());
   const [error, setError] = useState<string | null>(null);
+  const [previewSrc, setPreviewSrc] = useState("");
 
   useEffect(() => {
     if (opened) {
@@ -29,19 +30,32 @@ export default function EditEquationModal({
     }
   }, [opened, initial]);
 
-  const previewSrc = useMemo(() => {
-    try {
-      if (!text.trim()) {
-        return "";
-      }
-      return latexToSvgDataUrl(text.trim(), {
-        display: true,
-        encoding: "base64",
-      });
-    } catch {
-      setError("Failed to render preview.");
-      return "";
+  useEffect(() => {
+    if (!text.trim()) {
+      setPreviewSrc("");
+      return;
     }
+
+    let canceled = false;
+    latexToSvgDataUrl(text.trim(), {
+      display: true,
+      encoding: "base64",
+    })
+      .then((src) => {
+        if (!canceled) {
+          setPreviewSrc(src);
+          setError(null);
+        }
+      })
+      .catch(() => {
+        if (!canceled) {
+          setError("Failed to render preview.");
+          setPreviewSrc("");
+        }
+      });
+    return () => {
+      canceled = true;
+    };
   }, [text]);
 
   return (
