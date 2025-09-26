@@ -33,7 +33,7 @@ export function drawStroke(ctx: CanvasRenderingContext2D, stroke: StrokeEvent) {
       case "rectangle":
         drawRectangle(ctx, stroke.startPoint, stroke.endPoint);
         break;
-      case "circle":
+      case "ellipse":
         drawCircle(ctx, stroke.startPoint, stroke.endPoint);
         break;
       case "line":

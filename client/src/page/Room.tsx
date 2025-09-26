@@ -53,6 +53,7 @@ import * as Y from "yjs";
 import { YArrayEvent } from "yjs";
 import { clamp, useDebouncedCallback, useDisclosure } from "@mantine/hooks";
 import { createWS, type WS } from "@/util/ws.ts";
+import snap from "@/util/snap.ts";
 import type {
   CanvasObject,
   Point,
@@ -130,6 +131,7 @@ export default function Room() {
   const shapeStartRef = useRef<Point | null>(null);
   const shapeEndRef = useRef<Point | null>(null);
   const [tool, setTool] = useState<Tool>("select");
+  const [shiftKey, setShiftKey] = useState(false);
 
   const [penColor, setPenColor] = useState<string>("#000000");
   const [lineWidth, setLineWidth] = useState<number>(2);
@@ -269,6 +271,27 @@ export default function Room() {
   }, [selectedObject]);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setShiftKey(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Shift") {
+        setShiftKey(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
       const target = e.target;
       if (!(target instanceof HTMLElement)) {
@@ -357,7 +380,7 @@ export default function Room() {
     canvasRef.current!.setPointerCapture(e.pointerId);
     drawingRef.current = true;
     const pos = getPos(e.nativeEvent);
-    if (tool === "rectangle" || tool === "circle" || tool === "line") {
+    if (tool === "rectangle" || tool === "ellipse" || tool === "line") {
       shapeStartRef.current = pos;
     } else {
       lastPosRef.current = pos;
@@ -369,9 +392,13 @@ export default function Room() {
       return;
     }
     const curr = getPos(e.nativeEvent);
-    if (tool === "rectangle" || tool === "circle" || tool === "line") {
+    if (tool === "rectangle" || tool === "ellipse" || tool === "line") {
       if (shapeStartRef.current && previewCtxRef.current) {
-        shapeEndRef.current = curr;
+        let drawEnd = curr;
+        if (shiftKey) {
+          drawEnd = snap(tool, shapeStartRef.current, curr);
+        }
+        shapeEndRef.current = drawEnd;
         clearCanvas(previewCtxRef.current, previewCanvasRef.current!);
         previewCtxRef.current.save();
         previewCtxRef.current.strokeStyle = penColor;
@@ -380,13 +407,17 @@ export default function Room() {
         previewCtxRef.current.lineJoin = "round";
         switch (tool) {
           case "rectangle":
-            drawRectangle(previewCtxRef.current, shapeStartRef.current, curr);
+            drawRectangle(
+              previewCtxRef.current,
+              shapeStartRef.current,
+              drawEnd,
+            );
             break;
-          case "circle":
-            drawCircle(previewCtxRef.current, shapeStartRef.current, curr);
+          case "ellipse":
+            drawCircle(previewCtxRef.current, shapeStartRef.current, drawEnd);
             break;
           case "line":
-            drawLine(previewCtxRef.current, shapeStartRef.current, curr);
+            drawLine(previewCtxRef.current, shapeStartRef.current, drawEnd);
             break;
         }
         previewCtxRef.current.restore();
@@ -411,7 +442,7 @@ export default function Room() {
       return;
     }
     drawingRef.current = false;
-    if (tool === "rectangle" || tool === "circle" || tool === "line") {
+    if (tool === "rectangle" || tool === "ellipse" || tool === "line") {
       if (
         ctxRef.current &&
         shapeStartRef.current &&
@@ -543,11 +574,11 @@ export default function Room() {
                   <IconRectangle size={18} />
                 </ActionIcon>
               </Tooltip>
-              <Tooltip label="Circle" openDelay={300}>
+              <Tooltip label="Ellipse" openDelay={300}>
                 <ActionIcon
-                  variant={tool === "circle" ? "filled" : "default"}
-                  onClick={() => setTool("circle")}
-                  aria-pressed={tool === "circle"}
+                  variant={tool === "ellipse" ? "filled" : "default"}
+                  onClick={() => setTool("ellipse")}
+                  aria-pressed={tool === "ellipse"}
                 >
                   <IconCircle size={18} />
                 </ActionIcon>

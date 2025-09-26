@@ -7,7 +7,7 @@ export type Tool =
   | "pen"
   | "eraser"
   | "rectangle"
-  | "circle"
+  | "ellipse"
   | "line";
 
 export type StrokeEvent = {
