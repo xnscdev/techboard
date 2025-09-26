@@ -134,7 +134,9 @@ export default function Room() {
   const [shiftKey, setShiftKey] = useState(false);
 
   const [penColor, setPenColor] = useState<string>("#000000");
-  const [lineWidth, setLineWidth] = useState<number>(2);
+  const [lineWidths, setLineWidths] = useState<
+    Omit<Record<Tool, number>, "select">
+  >({ pen: 2, eraser: 36, rectangle: 2, ellipse: 2, line: 2 });
 
   const [fontFamily, setFontFamily] = useState<string>("Arial");
   const [fontSize, setFontSize] = useState<number>(20);
@@ -336,11 +338,16 @@ export default function Room() {
   });
 
   const flushStrokes = useDebouncedCallback(() => {
-    if (pendingSegmentsRef.current.length && docRef.current && wsReady) {
+    if (
+      pendingSegmentsRef.current.length &&
+      docRef.current &&
+      wsReady &&
+      tool !== "select"
+    ) {
       const stroke: StrokeEvent = {
         segments: pendingSegmentsRef.current,
         tool,
-        lineWidth,
+        lineWidth: lineWidths[tool],
         color: penColor,
       };
       docRef.current.transact(
@@ -402,7 +409,7 @@ export default function Room() {
         clearCanvas(previewCtxRef.current, previewCanvasRef.current!);
         previewCtxRef.current.save();
         previewCtxRef.current.strokeStyle = penColor;
-        previewCtxRef.current.lineWidth = lineWidth;
+        previewCtxRef.current.lineWidth = lineWidths[tool];
         previewCtxRef.current.lineCap = "round";
         previewCtxRef.current.lineJoin = "round";
         switch (tool) {
@@ -428,7 +435,7 @@ export default function Room() {
       drawStroke(ctxRef.current, {
         segments: [seg],
         tool,
-        lineWidth,
+        lineWidth: lineWidths[tool],
         color: penColor,
       });
       pendingSegmentsRef.current.push(seg);
@@ -453,7 +460,7 @@ export default function Room() {
         const stroke: StrokeEvent = {
           segments: [],
           tool,
-          lineWidth,
+          lineWidth: lineWidths[tool],
           color: penColor,
           startPoint: shapeStartRef.current,
           endPoint: shapeEndRef.current,
@@ -533,7 +540,7 @@ export default function Room() {
         </Button>
       </Group>
       <Box bd="1px solid #eee" bdrs={8} bg="#fafafa">
-        <ScrollArea type="auto" scrollHideDelay={0} p={10}>
+        <ScrollArea type="hover" scrollHideDelay={800} p={10}>
           <Group gap="xs" wrap="nowrap">
             <ActionIcon.Group>
               <Tooltip label="Select" openDelay={300}>
@@ -649,6 +656,7 @@ export default function Room() {
                 onChange={setPenColor}
                 disallowInput
                 size="xs"
+                miw={120}
                 maw={120}
                 placeholder="#000000"
                 rightSection={<IconPencil size={18} />}
@@ -657,10 +665,15 @@ export default function Room() {
             </Tooltip>
             <Tooltip label="Line width" openDelay={300}>
               <NumberInput
-                value={lineWidth}
-                onChange={(value) => setLineWidth(value as number)}
+                value={tool === "select" ? "" : lineWidths[tool]}
+                onChange={(value) =>
+                  tool !== "select" &&
+                  setLineWidths((p) => ({ ...p, [tool]: value as number }))
+                }
                 size="xs"
+                disabled={tool === "select"}
                 leftSection={<IconRulerMeasure size={18} />}
+                miw={80}
                 maw={80}
                 min={1}
                 max={80}
@@ -673,6 +686,7 @@ export default function Room() {
               <Select
                 size="xs"
                 leftSection={<IconTypeface size={18} />}
+                miw={160}
                 maw={160}
                 value={fontFamily}
                 onChange={(value) => {
@@ -701,6 +715,7 @@ export default function Room() {
                 }}
                 size="xs"
                 leftSection={<IconTextSize size={18} />}
+                miw={80}
                 maw={80}
                 min={6}
                 max={120}
@@ -717,6 +732,7 @@ export default function Room() {
                 }}
                 disallowInput
                 size="xs"
+                miw={120}
                 maw={120}
                 placeholder="#000000"
                 rightSection={<IconTypography size={18} />}
