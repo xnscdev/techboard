@@ -28,14 +28,17 @@ import {
   IconArrowBackUp,
   IconArrowForwardUp,
   IconCheck,
+  IconCircle,
   IconCopy,
   IconEraser,
   IconInputX,
+  IconLine,
   IconMathFunction,
   IconPencil,
   IconPencilX,
   IconPhotoPlus,
   IconPointer,
+  IconRectangle,
   IconRulerMeasure,
   IconStackBack,
   IconStackBackward,
@@ -58,7 +61,14 @@ import type {
   TextAttributes,
   Tool,
 } from "@/util/types.ts";
-import { drawStroke, replay, setupCanvas } from "@/util/canvas.ts";
+import {
+  drawStroke,
+  drawRectangle,
+  drawCircle,
+  drawLine,
+  replay,
+  setupCanvas,
+} from "@/util/canvas.ts";
 import ObjectLayer, {
   type ObjectLayerHandle,
 } from "@/components/ObjectLayer.tsx";
@@ -102,6 +112,8 @@ export default function Room() {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const previewCtxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   const [wsReady, setWsReady] = useState(false);
   const wsRef = useRef<WS | null>(null);
@@ -115,6 +127,8 @@ export default function Room() {
   const drawingRef = useRef(false);
   const lastPosRef = useRef<Point | null>(null);
   const pendingSegmentsRef = useRef<Segment[]>([]);
+  const shapeStartRef = useRef<Point | null>(null);
+  const shapeEndRef = useRef<Point | null>(null);
   const [tool, setTool] = useState<Tool>("select");
 
   const [penColor, setPenColor] = useState<string>("#000000");
@@ -144,6 +158,8 @@ export default function Room() {
   useEffect(() => {
     const canvas = canvasRef.current!;
     ctxRef.current = setupCanvas(canvas, boardWidth, boardHeight);
+    const previewCanvas = previewCanvasRef.current!;
+    previewCtxRef.current = setupCanvas(previewCanvas, boardWidth, boardHeight);
   }, []);
 
   useEffect(() => {
@@ -340,7 +356,12 @@ export default function Room() {
     }
     canvasRef.current!.setPointerCapture(e.pointerId);
     drawingRef.current = true;
-    lastPosRef.current = getPos(e.nativeEvent);
+    const pos = getPos(e.nativeEvent);
+    if (tool === "rectangle" || tool === "circle" || tool === "line") {
+      shapeStartRef.current = pos;
+    } else {
+      lastPosRef.current = pos;
+    }
   };
 
   const onPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -348,17 +369,41 @@ export default function Room() {
       return;
     }
     const curr = getPos(e.nativeEvent);
-    const prev = lastPosRef.current!;
-    const seg: Segment = { from: prev, to: curr };
-    drawStroke(ctxRef.current, {
-      segments: [seg],
-      tool,
-      lineWidth,
-      color: penColor,
-    });
-    pendingSegmentsRef.current.push(seg);
-    flushStrokes();
-    lastPosRef.current = curr;
+    if (tool === "rectangle" || tool === "circle" || tool === "line") {
+      if (shapeStartRef.current && previewCtxRef.current) {
+        shapeEndRef.current = curr;
+        clearCanvas(previewCtxRef.current, previewCanvasRef.current!);
+        previewCtxRef.current.save();
+        previewCtxRef.current.strokeStyle = penColor;
+        previewCtxRef.current.lineWidth = lineWidth;
+        previewCtxRef.current.lineCap = "round";
+        previewCtxRef.current.lineJoin = "round";
+        switch (tool) {
+          case "rectangle":
+            drawRectangle(previewCtxRef.current, shapeStartRef.current, curr);
+            break;
+          case "circle":
+            drawCircle(previewCtxRef.current, shapeStartRef.current, curr);
+            break;
+          case "line":
+            drawLine(previewCtxRef.current, shapeStartRef.current, curr);
+            break;
+        }
+        previewCtxRef.current.restore();
+      }
+    } else {
+      const prev = lastPosRef.current!;
+      const seg: Segment = { from: prev, to: curr };
+      drawStroke(ctxRef.current, {
+        segments: [seg],
+        tool,
+        lineWidth,
+        color: penColor,
+      });
+      pendingSegmentsRef.current.push(seg);
+      flushStrokes();
+      lastPosRef.current = curr;
+    }
   };
 
   const onPointerUp = () => {
@@ -366,8 +411,38 @@ export default function Room() {
       return;
     }
     drawingRef.current = false;
-    lastPosRef.current = null;
-    flushStrokes.flush();
+    if (tool === "rectangle" || tool === "circle" || tool === "line") {
+      if (
+        ctxRef.current &&
+        shapeStartRef.current &&
+        shapeEndRef.current &&
+        docRef.current &&
+        wsReady
+      ) {
+        const stroke: StrokeEvent = {
+          segments: [],
+          tool,
+          lineWidth,
+          color: penColor,
+          startPoint: shapeStartRef.current,
+          endPoint: shapeEndRef.current,
+        };
+        docRef.current.transact(
+          () => strokesRef.current?.push([stroke]),
+          "local",
+        );
+        undoRef.current?.stopCapturing();
+        drawStroke(ctxRef.current, stroke);
+      }
+      if (previewCtxRef.current) {
+        clearCanvas(previewCtxRef.current, previewCanvasRef.current!);
+      }
+      shapeStartRef.current = null;
+      shapeEndRef.current = null;
+    } else {
+      lastPosRef.current = null;
+      flushStrokes.flush();
+    }
   };
 
   const updateTextAttributes = (attr: Partial<TextAttributes>) => {
@@ -455,6 +530,35 @@ export default function Room() {
                   aria-pressed={tool === "eraser"}
                 >
                   <IconEraser size={18} />
+                </ActionIcon>
+              </Tooltip>
+            </ActionIcon.Group>
+            <ActionIcon.Group>
+              <Tooltip label="Rectangle" openDelay={300}>
+                <ActionIcon
+                  variant={tool === "rectangle" ? "filled" : "default"}
+                  onClick={() => setTool("rectangle")}
+                  aria-pressed={tool === "rectangle"}
+                >
+                  <IconRectangle size={18} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Circle" openDelay={300}>
+                <ActionIcon
+                  variant={tool === "circle" ? "filled" : "default"}
+                  onClick={() => setTool("circle")}
+                  aria-pressed={tool === "circle"}
+                >
+                  <IconCircle size={18} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Line" openDelay={300}>
+                <ActionIcon
+                  variant={tool === "line" ? "filled" : "default"}
+                  onClick={() => setTool("line")}
+                  aria-pressed={tool === "line"}
+                >
+                  <IconLine size={18} />
                 </ActionIcon>
               </Tooltip>
             </ActionIcon.Group>
@@ -753,6 +857,17 @@ export default function Room() {
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
             onPointerLeave={onPointerUp}
+          />
+          <canvas
+            ref={previewCanvasRef}
+            style={{
+              position: "absolute",
+              inset: 0,
+              touchAction: "none",
+              display: "block",
+              zIndex: 2,
+              pointerEvents: "none",
+            }}
           />
           {docRef.current && objectsRef.current && (
             <ObjectLayer
