@@ -219,6 +219,16 @@ export default function Room() {
       if (e.key === "Shift") {
         setShiftKey(true);
       }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undoRef.current?.undo();
+      }
+
+      if ((e.ctrlKey || e.metaKey) && ((e.key === "z" && e.shiftKey) || e.key === "y")) {
+        e.preventDefault();
+        undoRef.current?.redo();
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
