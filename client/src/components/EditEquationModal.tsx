@@ -47,8 +47,9 @@ export default function EditEquationModal({
           setError(null);
         }
       })
-      .catch(() => {
+      .catch((e) => {
         if (!canceled) {
+          console.error(e);
           setError("Failed to render preview.");
           setPreviewSrc("");
         }

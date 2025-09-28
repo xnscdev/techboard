@@ -1,9 +1,12 @@
-import type { MathJaxDocument } from "mathjax-full/js/mathjax.js";
-import type { AdaptorInstance } from "mathjax-full/js/adaptors/liteAdaptor.js";
+import type { MathDocument } from "mathjax-full/js/core/MathDocument.js";
+import type { LiteAdaptor } from "mathjax-full/js/adaptors/liteAdaptor.js";
+import type { LiteElement } from "mathjax-full/js/adaptors/lite/Element.js";
+import type { LiteText } from "mathjax-full/js/adaptors/lite/Text.js";
+import type { LiteDocument } from "mathjax-full/js/adaptors/lite/Document.js";
 
 let mathJaxPromise: Promise<{
-  mj: MathJaxDocument;
-  adaptor: AdaptorInstance;
+  mj: MathDocument<LiteElement, LiteText, LiteDocument>;
+  adaptor: LiteAdaptor;
 }> | null = null;
 
 async function initMathJax() {
@@ -11,21 +14,29 @@ async function initMathJax() {
     const [
       { mathjax },
       { TeX },
-      { AllPackages },
       { SVG },
       { liteAdaptor },
       { RegisterHTMLHandler },
     ] = await Promise.all([
       import("mathjax-full/js/mathjax.js"),
       import("mathjax-full/js/input/tex.js"),
-      import("mathjax-full/js/input/tex/AllPackages.js"),
       import("mathjax-full/js/output/svg.js"),
       import("mathjax-full/js/adaptors/liteAdaptor.js"),
       import("mathjax-full/js/handlers/html.js"),
+      import("mathjax-full/js/input/tex/base/BaseConfiguration.js"),
+      import("mathjax-full/js/input/tex/ams/AmsConfiguration.js"),
+      import("mathjax-full/js/input/tex/mathtools/MathtoolsConfiguration.js"),
+      import("mathjax-full/js/input/tex/mhchem/MhchemConfiguration.js"),
+      import("mathjax-full/js/input/tex/physics/PhysicsConfiguration.js"),
+      import(
+        "mathjax-full/js/input/tex/noundefined/NoUndefinedConfiguration.js"
+      ),
     ]);
     const adaptor = liteAdaptor();
     RegisterHTMLHandler(adaptor);
-    const tex = new TeX({ packages: AllPackages });
+    const tex = new TeX({
+      packages: ["base", "ams", "mathtools", "mhchem", "physics"],
+    });
     const svg = new SVG({ fontCache: "none" });
     const mj = mathjax.document("", { InputJax: tex, OutputJax: svg });
     console.log("MathJax loaded");
@@ -69,7 +80,7 @@ export async function latexToSvgDataUrl(
   const { display = false, encoding = "base64" } = opts || {};
   const { mj, adaptor } = await initMathJax();
   const node = mj.convert(latex, { display });
-  const container = adaptor.outerHTML(node);
+  const container = adaptor.outerHTML(node as LiteElement);
   const svg = extractSvgString(container);
   return toDataUrl(svg, encoding);
 }
