@@ -95,3 +95,32 @@ export function replay(ctx: CanvasRenderingContext2D, strokes: StrokeEvent[]) {
     drawStroke(ctx, stroke);
   }
 }
+
+export function downloadCanvas(
+  layers: HTMLCanvasElement[],
+  width: number,
+  height: number,
+  filename = "techboard-export",
+) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d")!;
+  canvas.width = width;
+  canvas.height = height;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  for (const layer of layers) {
+    ctx.drawImage(layer, 0, 0, layer.width, layer.height, 0, 0, width, height);
+  }
+  canvas.toBlob((blob) => {
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${filename}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  }, "image/png");
+}

@@ -30,6 +30,7 @@ import {
   IconCheck,
   IconCircle,
   IconCopy,
+  IconDownload,
   IconEraser,
   IconInputX,
   IconLine,
@@ -69,6 +70,7 @@ import {
   drawLine,
   replay,
   setupCanvas,
+  downloadCanvas,
 } from "@/util/canvas.ts";
 import ObjectLayer, {
   type ObjectLayerHandle,
@@ -504,6 +506,21 @@ export default function Room() {
     setTool("select");
   }, 300);
 
+  const handleDownload = () => {
+    if (!canvasRef.current) {
+      return;
+    }
+    const layers = [canvasRef.current];
+    const objectCanvas = objectLayerRef.current?.getCanvas() ?? null;
+    if (objectCanvas) layers.push(objectCanvas);
+    const timestamp = new Date()
+      .toISOString()
+      .slice(0, 16)
+      .replace(/[:.]/g, "-");
+    const filename = `techboard-${roomId}-${timestamp}`;
+    downloadCanvas(layers, boardWidth, boardHeight, filename);
+  };
+
   return (
     <Stack p="md" gap="md" h="100vh">
       <Group justify="space-between" wrap="nowrap">
@@ -860,6 +877,12 @@ export default function Room() {
                 </ActionIcon>
               </Tooltip>
             </ActionIcon.Group>
+            <Divider orientation="vertical" />
+            <Tooltip label="Download image" openDelay={300}>
+              <ActionIcon variant="default" onClick={handleDownload}>
+                <IconDownload size={18} />
+              </ActionIcon>
+            </Tooltip>
           </Group>
         </ScrollArea>
       </Box>

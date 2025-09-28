@@ -14,8 +14,8 @@ export type PlacerOptions = {
 export default function getPlacer({
   initialX = 60,
   initialY = 60,
-  maxX = 800,
-  maxY = 480,
+  maxX = 400,
+  maxY = 360,
   stepX = 30,
   stepY = 30,
   offsetX = 40,

@@ -36,6 +36,7 @@ export type ObjectLayerHandle = {
   sendToBack: () => void;
   deleteSelected: () => void;
   deleteAll: () => void;
+  getCanvas: () => HTMLCanvasElement | null;
 };
 
 type ObjectProps = {
@@ -90,6 +91,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
   const [items, setItems] = useState<CanvasObject[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isEditingText, setIsEditingText] = useState<boolean>(false);
+  const stageRef = useRef<Konva.Stage>(null);
   const trRef = useRef<Konva.Transformer>(null);
   const nodeRefs = useRef<Record<string, Konva.Node | null>>({});
   const placer = useRef(getPlacer());
@@ -341,6 +343,9 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       }, "local");
       setSelectedId(null);
     },
+    getCanvas() {
+      return stageRef.current?.toCanvas() ?? null;
+    },
   }));
 
   useEffect(() => {
@@ -391,6 +396,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
 
   return (
     <Stage
+      ref={stageRef}
       width={width}
       height={height}
       style={stageStyle}
