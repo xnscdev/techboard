@@ -50,6 +50,7 @@ type ObjectProps = {
   onSelectionChange?: (obj: CanvasObject | null) => void;
   onTextAttributesChange?: (attr: TextAttributes) => void;
   onRequestEditLatex?: (id: string, text: string) => void;
+  getViewportOffset?: () => { x: number; y: number };
 };
 
 function setObjectToMap<T extends Record<string, unknown>>(
@@ -85,6 +86,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     order,
     onSelectionChange,
     onRequestEditLatex,
+    getViewportOffset,
   },
   ref,
 ) {
@@ -95,6 +97,18 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
   const trRef = useRef<Konva.Transformer>(null);
   const nodeRefs = useRef<Record<string, Konva.Node | null>>({});
   const placer = useRef(getPlacer());
+
+  const getPlacementPosition = () => {
+    const basePos = placer.current();
+    if (!getViewportOffset) {
+      return basePos;
+    }
+    const viewport = getViewportOffset();
+    return {
+      x: basePos.x + viewport.x,
+      y: basePos.y + viewport.y,
+    };
+  };
 
   const selectedObject = useMemo(
     () =>
@@ -159,7 +173,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     }
     canvas.remove();
     const id = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const { x, y } = placer.current();
+    const { x, y } = getPlacementPosition();
     const obj: Omit<ImageObject, "id"> = {
       type: "image",
       src: newUrl,
@@ -198,7 +212,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       const el = await loadHTMLImage(url);
       const { width, height } = scaleImage(el, 20);
       const id = `eq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const { x, y } = placer.current();
+      const { x, y } = getPlacementPosition();
       const obj: Omit<LatexObject, "id"> = {
         type: "latex",
         text,
@@ -244,7 +258,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     },
     addText(text: string, attr: TextAttributes) {
       const id = `txt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const { x, y } = placer.current();
+      const { x, y } = getPlacementPosition();
       const obj: Omit<TextObject, "id"> = {
         type: "text",
         text,

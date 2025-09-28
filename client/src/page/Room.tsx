@@ -148,6 +148,7 @@ export default function Room() {
   );
 
   const objectLayerRef = useRef<ObjectLayerHandle | null>(null);
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
   const [selectedObject, setSelectedObject] = useState<CanvasObject | null>(
     null,
   );
@@ -521,6 +522,16 @@ export default function Room() {
     downloadCanvas(layers, boardWidth, boardHeight, filename);
   };
 
+  const getViewportOffset = (): Point => {
+    if (!canvasContainerRef.current) {
+      return { x: 0, y: 0 };
+    }
+    return {
+      x: canvasContainerRef.current.scrollLeft,
+      y: canvasContainerRef.current.scrollTop,
+    };
+  };
+
   return (
     <Stack p="md" gap="md" h="100vh">
       <Group justify="space-between" wrap="nowrap">
@@ -887,6 +898,7 @@ export default function Room() {
         </ScrollArea>
       </Box>
       <Box
+        ref={canvasContainerRef}
         flex={1}
         bd="1px solid #ddd"
         bdrs={8}
@@ -955,6 +967,7 @@ export default function Room() {
                 setLatexInitial(text ?? "");
                 latexModalOpen();
               }}
+              getViewportOffset={getViewportOffset}
             />
           )}
           {showDragOverlay && (
