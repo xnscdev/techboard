@@ -35,7 +35,14 @@ async function initMathJax() {
     const adaptor = liteAdaptor();
     RegisterHTMLHandler(adaptor);
     const tex = new TeX({
-      packages: ["base", "ams", "mathtools", "mhchem", "physics"],
+      packages: [
+        "base",
+        "ams",
+        "mathtools",
+        "mhchem",
+        "physics",
+        "noundefined",
+      ],
     });
     const svg = new SVG({ fontCache: "none" });
     const mj = mathjax.document("", { InputJax: tex, OutputJax: svg });
