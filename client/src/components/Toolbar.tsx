@@ -154,6 +154,89 @@ export default function Toolbar({
             </Tooltip>
           </ActionIcon.Group>
           <ActionIcon.Group>
+            <Tooltip label="Undo" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                disabled={!canUndo}
+                onClick={() => undoManager?.undo()}
+              >
+                <IconArrowBackUp size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Redo" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                disabled={!canRedo}
+                onClick={() => undoManager?.redo()}
+              >
+                <IconArrowForwardUp size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </ActionIcon.Group>
+          <ActionIcon.Group>
+            <Tooltip label="Delete object" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                disabled={!selectedObject}
+                onClick={() => objectLayerHandle?.deleteSelected()}
+              >
+                <IconTrashX size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Delete all drawings" openDelay={300}>
+              <ActionIcon variant="default" onClick={clearDrawings}>
+                <IconPencilX size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Delete all objects" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                onClick={() => objectLayerHandle?.deleteAll()}
+              >
+                <IconInputX size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </ActionIcon.Group>
+          <ActionIcon.Group>
+            <Tooltip label="Bring forward" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                disabled={!selectedObject}
+                onClick={() => objectLayerHandle?.bringForward()}
+              >
+                <IconStackForward size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Send backward" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                disabled={!selectedObject}
+                onClick={() => objectLayerHandle?.sendBackward()}
+              >
+                <IconStackBackward size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Bring to front" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                disabled={!selectedObject}
+                onClick={() => objectLayerHandle?.bringToFront()}
+              >
+                <IconStackFront size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Send to back" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                disabled={!selectedObject}
+                onClick={() => objectLayerHandle?.sendToBack()}
+              >
+                <IconStackBack size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </ActionIcon.Group>
+          <Divider orientation="vertical" />
+          <ActionIcon.Group>
             <Tooltip label="Rectangle" openDelay={300}>
               <ActionIcon
                 variant={tool === "rectangle" ? "filled" : "default"}
@@ -349,89 +432,6 @@ export default function Toolbar({
                 aria-pressed={textAlign === "right"}
               >
                 <IconAlignRight size={18} />
-              </ActionIcon>
-            </Tooltip>
-          </ActionIcon.Group>
-          <Divider orientation="vertical" />
-          <ActionIcon.Group>
-            <Tooltip label="Undo" openDelay={300}>
-              <ActionIcon
-                variant="default"
-                disabled={!canUndo}
-                onClick={() => undoManager?.undo()}
-              >
-                <IconArrowBackUp size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Redo" openDelay={300}>
-              <ActionIcon
-                variant="default"
-                disabled={!canRedo}
-                onClick={() => undoManager?.redo()}
-              >
-                <IconArrowForwardUp size={18} />
-              </ActionIcon>
-            </Tooltip>
-          </ActionIcon.Group>
-          <ActionIcon.Group>
-            <Tooltip label="Bring forward" openDelay={300}>
-              <ActionIcon
-                variant="default"
-                disabled={!selectedObject}
-                onClick={() => objectLayerHandle?.bringForward()}
-              >
-                <IconStackForward size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Send backward" openDelay={300}>
-              <ActionIcon
-                variant="default"
-                disabled={!selectedObject}
-                onClick={() => objectLayerHandle?.sendBackward()}
-              >
-                <IconStackBackward size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Bring to front" openDelay={300}>
-              <ActionIcon
-                variant="default"
-                disabled={!selectedObject}
-                onClick={() => objectLayerHandle?.bringToFront()}
-              >
-                <IconStackFront size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Send to back" openDelay={300}>
-              <ActionIcon
-                variant="default"
-                disabled={!selectedObject}
-                onClick={() => objectLayerHandle?.sendToBack()}
-              >
-                <IconStackBack size={18} />
-              </ActionIcon>
-            </Tooltip>
-          </ActionIcon.Group>
-          <ActionIcon.Group>
-            <Tooltip label="Delete object" openDelay={300}>
-              <ActionIcon
-                variant="default"
-                disabled={!selectedObject}
-                onClick={() => objectLayerHandle?.deleteSelected()}
-              >
-                <IconTrashX size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Delete all drawings" openDelay={300}>
-              <ActionIcon variant="default" onClick={clearDrawings}>
-                <IconPencilX size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Delete all objects" openDelay={300}>
-              <ActionIcon
-                variant="default"
-                onClick={() => objectLayerHandle?.deleteAll()}
-              >
-                <IconInputX size={18} />
               </ActionIcon>
             </Tooltip>
           </ActionIcon.Group>
