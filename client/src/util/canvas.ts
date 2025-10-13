@@ -40,6 +40,9 @@ export function drawStroke(ctx: CanvasRenderingContext2D, stroke: StrokeEvent) {
       case "line":
         drawLine(ctx, stroke.startPoint, stroke.endPoint);
         break;
+      case "plus":
+        drawPlus(ctx, stroke.startPoint, stroke.endPoint);
+        break;
     }
   } else {
     for (const s of stroke.segments) {
@@ -88,6 +91,33 @@ export function drawLine(
   ctx.beginPath();
   ctx.moveTo(start.x, start.y);
   ctx.lineTo(end.x, end.y);
+  ctx.stroke();
+}
+
+export function drawPlus(
+  ctx: CanvasRenderingContext2D,
+  start: Point,
+  end: Point,
+) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
+  ctx.stroke();
+  const midX = (start.x + end.x) / 2;
+  const midY = (start.y + end.y) / 2;
+  const crossDx = -dy;
+  const crossDy = dx;
+  const halfLength = Math.sqrt(dx * dx + dy * dy) / 2;
+  const crossLength = Math.sqrt(crossDx * crossDx + crossDy * crossDy);
+  const normCrossDx =
+    crossLength > 0 ? (crossDx / crossLength) * halfLength : 0;
+  const normCrossDy =
+    crossLength > 0 ? (crossDy / crossLength) * halfLength : 0;
+  ctx.beginPath();
+  ctx.moveTo(midX - normCrossDx, midY - normCrossDy);
+  ctx.lineTo(midX + normCrossDx, midY + normCrossDy);
   ctx.stroke();
 }
 

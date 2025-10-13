@@ -30,6 +30,7 @@ import {
   IconPencil,
   IconPencilX,
   IconPhotoPlus,
+  IconPlus,
   IconPointer,
   type IconProps,
   IconRectangle,
@@ -101,6 +102,7 @@ const shapeIcons = new Map<ShapeType, ComponentType<IconProps>>([
   ["rectangle", IconRectangle],
   ["ellipse", IconCircle],
   ["line", IconLine],
+  ["plus", IconPlus],
 ]);
 
 export default function Toolbar({

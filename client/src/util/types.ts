@@ -4,7 +4,7 @@ export type Segment = { from: Point; to: Point };
 
 export type Tool = "select" | "pen" | "eraser" | "draw-shape";
 
-export type ShapeType = "rectangle" | "ellipse" | "line";
+export type ShapeType = "rectangle" | "ellipse" | "line" | "plus";
 
 export type StrokeEvent = {
   segments: Segment[];

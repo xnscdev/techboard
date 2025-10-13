@@ -27,6 +27,7 @@ import type {
   CanvasObject,
   Point,
   Segment,
+  ShapeType,
   StrokeEvent,
   Tool,
 } from "@/util/types.ts";
@@ -35,6 +36,7 @@ import {
   drawRectangle,
   drawCircle,
   drawLine,
+  drawPlus,
   replay,
   setupCanvas,
   downloadCanvas,
@@ -73,9 +75,7 @@ export default function Room() {
   const shapeStartRef = useRef<Point | null>(null);
   const shapeEndRef = useRef<Point | null>(null);
   const [tool, setTool] = useState<Tool>("select");
-  const [shapeType, setShapeType] = useState<"rectangle" | "ellipse" | "line">(
-    "rectangle",
-  );
+  const [shapeType, setShapeType] = useState<ShapeType>("rectangle");
   const [shiftKey, setShiftKey] = useState(false);
 
   const [penColor, setPenColor] = useState<string>("#000000");
@@ -342,6 +342,9 @@ export default function Room() {
             break;
           case "line":
             drawLine(previewCtxRef.current, shapeStartRef.current, drawEnd);
+            break;
+          case "plus":
+            drawPlus(previewCtxRef.current, shapeStartRef.current, drawEnd);
             break;
         }
         previewCtxRef.current.restore();

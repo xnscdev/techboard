@@ -7,6 +7,7 @@ export default function snap(shape: ShapeType, start: Point, end: Point) {
     case "ellipse":
       return snapEllipse(start, end);
     case "line":
+    case "plus":
       return snapLine(start, end);
     default:
       return end;
