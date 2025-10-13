@@ -7,6 +7,7 @@ export type WS = {
   onInitDoc: (fn: (update: Uint8Array) => void) => void;
   onUpdateDoc: (fn: (update: Uint8Array) => void) => void;
   sendUpdateDoc: (update: Uint8Array) => void;
+  onUserCount: (fn: (count: number) => void) => void;
 };
 
 export function createWS(baseUrl: string): WS {
@@ -30,5 +31,6 @@ export function createWS(baseUrl: string): WS {
         fn(u instanceof Uint8Array ? u : new Uint8Array(u)),
       ),
     sendUpdateDoc: (update) => socket.emit("updateDoc", update),
+    onUserCount: (fn) => socket.on("userCount", fn),
   };
 }

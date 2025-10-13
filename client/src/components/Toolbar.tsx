@@ -194,7 +194,7 @@ export default function Toolbar({
                 </ActionIcon.GroupSection>
               </Menu.Target>
               <Menu.Dropdown>
-                <SimpleGrid cols={3} spacing="xs" verticalSpacing="xs">
+                <SimpleGrid cols={4} spacing="xs" verticalSpacing="xs">
                   {Array.from(shapeIcons).map(([name, Icon]) => (
                     <Tooltip
                       key={name}
@@ -203,7 +203,10 @@ export default function Toolbar({
                     >
                       <ActionIcon
                         variant={shapeType === name ? "filled" : "default"}
-                        onClick={() => setShapeType(name)}
+                        onClick={() => {
+                          setShapeType(name);
+                          setTool("draw-shape");
+                        }}
                         aria-pressed={shapeType === name}
                       >
                         <Icon size={18} />

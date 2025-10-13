@@ -42,6 +42,7 @@ io.on("connection", (socket) => {
     socket.emit("initDoc", update);
     callback?.(true);
     console.log(`joinRoom: ${socket.id}: joined room ${roomId}`);
+    io.to(room.id).emit("userCount", room.clients.size);
   });
 
   socket.on("updateDoc", (update: ArrayBuffer) => {
@@ -61,6 +62,8 @@ io.on("connection", (socket) => {
     console.log(
       `disconnect: ${socket.id}: disconnected from room ${joinedRoom.id}`,
     );
+    // Broadcast updated user count to remaining clients in the room
+    io.to(joinedRoom.id).emit("userCount", joinedRoom.clients.size);
     if (joinedRoom.clients.size === 0) {
       joinedRoom.doc.destroy();
       rooms.delete(joinedRoom.id);

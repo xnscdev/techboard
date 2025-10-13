@@ -103,6 +103,7 @@ export default function Room() {
 
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [userCount, setUserCount] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -146,6 +147,7 @@ export default function Room() {
     doc.on("update", onLocalUpdateDoc);
     ws.onInitDoc((u) => Y.applyUpdate(doc, u, "remote"));
     ws.onUpdateDoc((u) => Y.applyUpdate(doc, u, "remote"));
+    ws.onUserCount((count) => setUserCount(count));
 
     const onStrokesChange = (e: YArrayEvent<StrokeEvent>) => {
       if (
@@ -455,7 +457,7 @@ export default function Room() {
   return (
     <Stack p="md" gap="md" h="100vh">
       <Group justify="space-between" wrap="nowrap">
-        <Group gap="xs">
+        <Group gap="md">
           <Title order={3} m={0}>
             Room: {roomId}
           </Title>
@@ -482,6 +484,9 @@ export default function Room() {
               </Tooltip>
             )}
           </CopyButton>
+          <Text size="sm" c="dimmed">
+            {userCount} user{userCount === 1 ? "" : "s"} connected
+          </Text>
         </Group>
         <Button variant="light" onClick={() => navigate("/")}>
           Leave
