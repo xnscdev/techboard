@@ -43,6 +43,18 @@ export function drawStroke(ctx: CanvasRenderingContext2D, stroke: StrokeEvent) {
       case "plus":
         drawPlus(ctx, stroke.startPoint, stroke.endPoint);
         break;
+      case "triangle-up":
+        drawTriangleUp(ctx, stroke.startPoint, stroke.endPoint);
+        break;
+      case "triangle-down":
+        drawTriangleDown(ctx, stroke.startPoint, stroke.endPoint);
+        break;
+      case "triangle-left":
+        drawTriangleLeft(ctx, stroke.startPoint, stroke.endPoint);
+        break;
+      case "triangle-right":
+        drawTriangleRight(ctx, stroke.startPoint, stroke.endPoint);
+        break;
     }
   } else {
     for (const s of stroke.segments) {
@@ -118,6 +130,78 @@ export function drawPlus(
   ctx.beginPath();
   ctx.moveTo(midX - normCrossDx, midY - normCrossDy);
   ctx.lineTo(midX + normCrossDx, midY + normCrossDy);
+  ctx.stroke();
+}
+
+export function drawTriangleUp(
+  ctx: CanvasRenderingContext2D,
+  start: Point,
+  end: Point,
+) {
+  const left = Math.min(start.x, end.x);
+  const right = Math.max(start.x, end.x);
+  const top = Math.min(start.y, end.y);
+  const bottom = Math.max(start.y, end.y);
+  const centerX = (left + right) / 2;
+  ctx.beginPath();
+  ctx.moveTo(centerX, top);
+  ctx.lineTo(right, bottom);
+  ctx.lineTo(left, bottom);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+export function drawTriangleDown(
+  ctx: CanvasRenderingContext2D,
+  start: Point,
+  end: Point,
+) {
+  const left = Math.min(start.x, end.x);
+  const right = Math.max(start.x, end.x);
+  const top = Math.min(start.y, end.y);
+  const bottom = Math.max(start.y, end.y);
+  const centerX = (left + right) / 2;
+  ctx.beginPath();
+  ctx.moveTo(centerX, bottom);
+  ctx.lineTo(right, top);
+  ctx.lineTo(left, top);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+export function drawTriangleLeft(
+  ctx: CanvasRenderingContext2D,
+  start: Point,
+  end: Point,
+) {
+  const left = Math.min(start.x, end.x);
+  const right = Math.max(start.x, end.x);
+  const top = Math.min(start.y, end.y);
+  const bottom = Math.max(start.y, end.y);
+  const centerY = (top + bottom) / 2;
+  ctx.beginPath();
+  ctx.moveTo(left, centerY);
+  ctx.lineTo(right, bottom);
+  ctx.lineTo(right, top);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+export function drawTriangleRight(
+  ctx: CanvasRenderingContext2D,
+  start: Point,
+  end: Point,
+) {
+  const left = Math.min(start.x, end.x);
+  const right = Math.max(start.x, end.x);
+  const top = Math.min(start.y, end.y);
+  const bottom = Math.max(start.y, end.y);
+  const centerY = (top + bottom) / 2;
+  ctx.beginPath();
+  ctx.moveTo(right, centerY);
+  ctx.lineTo(left, bottom);
+  ctx.lineTo(left, top);
+  ctx.closePath();
   ctx.stroke();
 }
 

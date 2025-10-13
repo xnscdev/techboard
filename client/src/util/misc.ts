@@ -14,7 +14,3 @@ export function toClampedNumber(
   }
   return clamp(value, min, max);
 }
-
-export function formatFromId(s: string) {
-  return s.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase());
-}

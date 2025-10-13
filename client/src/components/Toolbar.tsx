@@ -1,17 +1,14 @@
-import type { ComponentType, Dispatch, SetStateAction } from "react";
+import type { Dispatch, JSX, SetStateAction } from "react";
 import { useDebouncedCallback } from "@mantine/hooks";
 import {
   ActionIcon,
   Box,
-  Button,
   ColorInput,
   Divider,
   Group,
-  Menu,
   NumberInput,
   ScrollArea,
   Select,
-  SimpleGrid,
   Tooltip,
 } from "@mantine/core";
 import {
@@ -20,7 +17,6 @@ import {
   IconAlignRight,
   IconArrowBackUp,
   IconArrowForwardUp,
-  IconChevronDown,
   IconCircle,
   IconDownload,
   IconEraser,
@@ -32,7 +28,6 @@ import {
   IconPhotoPlus,
   IconPlus,
   IconPointer,
-  type IconProps,
   IconRectangle,
   IconRulerMeasure,
   IconStackBack,
@@ -41,11 +36,12 @@ import {
   IconStackFront,
   IconTextSize,
   IconTrashX,
+  IconTriangle,
   IconTypeface,
   IconTypography,
 } from "@tabler/icons-react";
 import * as Y from "yjs";
-import { formatFromId, toClampedNumber } from "@/util/misc.ts";
+import { toClampedNumber } from "@/util/misc.ts";
 import type {
   CanvasObject,
   ShapeType,
@@ -53,12 +49,13 @@ import type {
   Tool,
 } from "@/util/types.ts";
 import type { ObjectLayerHandle } from "@/components/ObjectLayer.tsx";
+import SelectActionIcon from "@/components/SelectActionIcon.tsx";
 
 type ToolbarProps = {
   tool: Tool;
-  setTool: (tool: Tool) => void;
+  setTool: Dispatch<SetStateAction<Tool>>;
   shapeType: ShapeType;
-  setShapeType: (shapeType: ShapeType) => void;
+  setShapeType: Dispatch<SetStateAction<ShapeType>>;
   penColor: string;
   setPenColor: Dispatch<SetStateAction<string>>;
   lineWidths: Omit<Record<Tool, number>, "select">;
@@ -98,11 +95,33 @@ const colorSwatches = [
   "#fd7e14",
 ];
 
-const shapeIcons = new Map<ShapeType, ComponentType<IconProps>>([
-  ["rectangle", IconRectangle],
-  ["ellipse", IconCircle],
-  ["line", IconLine],
-  ["plus", IconPlus],
+const shapeIcons = new Map<ShapeType, { name: string; icon: JSX.Element }>([
+  ["rectangle", { name: "Rectangle", icon: <IconRectangle size={18} /> }],
+  ["ellipse", { name: "Ellipse", icon: <IconCircle size={18} /> }],
+  ["line", { name: "Line", icon: <IconLine size={18} /> }],
+  ["plus", { name: "Plus", icon: <IconPlus size={18} /> }],
+  ["triangle-up", { name: "Triangle (up)", icon: <IconTriangle size={18} /> }],
+  [
+    "triangle-down",
+    {
+      name: "Triangle (down)",
+      icon: <IconTriangle size={18} transform="rotate(180)" />,
+    },
+  ],
+  [
+    "triangle-left",
+    {
+      name: "Triangle (left)",
+      icon: <IconTriangle size={18} transform="rotate(-90)" />,
+    },
+  ],
+  [
+    "triangle-right",
+    {
+      name: "Triangle (right)",
+      icon: <IconTriangle size={18} transform="rotate(90)" />,
+    },
+  ],
 ]);
 
 export default function Toolbar({
@@ -142,8 +161,6 @@ export default function Toolbar({
     200,
   );
 
-  const ShapeIcon = shapeIcons.get(shapeType)!;
-
   return (
     <Box bd="1px solid #eee" bdrs={8} bg="#fafafa">
       <ScrollArea type="hover" scrollHideDelay={800} p={10}>
@@ -176,46 +193,23 @@ export default function Toolbar({
                 <IconEraser size={18} />
               </ActionIcon>
             </Tooltip>
+          </ActionIcon.Group>
+          <ActionIcon.Group>
             <Tooltip label="Draw shape" openDelay={300}>
               <ActionIcon
                 variant={tool === "draw-shape" ? "filled" : "default"}
                 onClick={() => setTool("draw-shape")}
                 aria-pressed={tool === "draw-shape"}
               >
-                <ShapeIcon size={18} />
+                {shapeIcons.get(shapeType)?.icon}
               </ActionIcon>
             </Tooltip>
-            <Menu>
-              <Menu.Target>
-                <ActionIcon.GroupSection variant="default" size="md" px={0}>
-                  <Button variant="transparent" px={0}>
-                    <IconChevronDown size={12} />
-                  </Button>
-                </ActionIcon.GroupSection>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <SimpleGrid cols={4} spacing="xs" verticalSpacing="xs">
-                  {Array.from(shapeIcons).map(([name, Icon]) => (
-                    <Tooltip
-                      key={name}
-                      label={formatFromId(name)}
-                      openDelay={300}
-                    >
-                      <ActionIcon
-                        variant={shapeType === name ? "filled" : "default"}
-                        onClick={() => {
-                          setShapeType(name);
-                          setTool("draw-shape");
-                        }}
-                        aria-pressed={shapeType === name}
-                      >
-                        <Icon size={18} />
-                      </ActionIcon>
-                    </Tooltip>
-                  ))}
-                </SimpleGrid>
-              </Menu.Dropdown>
-            </Menu>
+            <SelectActionIcon
+              value={shapeType}
+              setValue={setShapeType}
+              icons={shapeIcons}
+              callback={() => setTool("draw-shape")}
+            />
           </ActionIcon.Group>
           <ActionIcon.Group>
             <Tooltip label="Insert image" openDelay={300}>

@@ -9,6 +9,12 @@ export default function snap(shape: ShapeType, start: Point, end: Point) {
     case "line":
     case "plus":
       return snapLine(start, end);
+    case "triangle-up":
+    case "triangle-down":
+      return snapTriangleVertical(start, end);
+    case "triangle-left":
+    case "triangle-right":
+      return snapTriangleHorizontal(start, end);
     default:
       return end;
   }
@@ -44,5 +50,27 @@ function snapLine(start: Point, end: Point): Point {
   return {
     x: start.x + Math.cos(snapAngle) * distance,
     y: start.y + Math.sin(snapAngle) * distance,
+  };
+}
+
+function snapTriangleVertical(start: Point, end: Point): Point {
+  const deltaX = end.x - start.x;
+  const deltaY = end.y - start.y;
+  const width = Math.abs(deltaX);
+  const height = (Math.sqrt(3) / 2) * width;
+  return {
+    x: end.x,
+    y: start.y + (deltaY >= 0 ? height : -height),
+  };
+}
+
+function snapTriangleHorizontal(start: Point, end: Point): Point {
+  const deltaX = end.x - start.x;
+  const deltaY = end.y - start.y;
+  const height = Math.abs(deltaY);
+  const width = (Math.sqrt(3) / 2) * height;
+  return {
+    x: start.x + (deltaX >= 0 ? width : -width),
+    y: end.y,
   };
 }

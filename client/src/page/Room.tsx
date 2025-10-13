@@ -39,6 +39,10 @@ import {
   drawCircle,
   drawLine,
   drawPlus,
+  drawTriangleUp,
+  drawTriangleDown,
+  drawTriangleLeft,
+  drawTriangleRight,
   replay,
   setupCanvas,
   downloadCanvas,
@@ -349,6 +353,34 @@ export default function Room() {
             break;
           case "plus":
             drawPlus(previewCtxRef.current, shapeStartRef.current, drawEnd);
+            break;
+          case "triangle-up":
+            drawTriangleUp(
+              previewCtxRef.current,
+              shapeStartRef.current,
+              drawEnd,
+            );
+            break;
+          case "triangle-down":
+            drawTriangleDown(
+              previewCtxRef.current,
+              shapeStartRef.current,
+              drawEnd,
+            );
+            break;
+          case "triangle-left":
+            drawTriangleLeft(
+              previewCtxRef.current,
+              shapeStartRef.current,
+              drawEnd,
+            );
+            break;
+          case "triangle-right":
+            drawTriangleRight(
+              previewCtxRef.current,
+              shapeStartRef.current,
+              drawEnd,
+            );
             break;
         }
         previewCtxRef.current.restore();
