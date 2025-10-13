@@ -9,8 +9,10 @@ import {
   ActionIcon,
   Box,
   Button,
+  Center,
   CopyButton,
   Group,
+  Loader,
   Stack,
   Text,
   Title,
@@ -627,6 +629,28 @@ export default function Room() {
         title={editingLatexId ? "Edit LaTeX Equation" : "Insert LaTeX Equation"}
         confirmLabel={editingLatexId ? "Update" : "Insert"}
       />
+      {!wsReady && (
+        <Box
+          pos="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          style={{
+            zIndex: 9999,
+            backgroundColor: "rgba(255, 255, 255, 0.95)",
+          }}
+        >
+          <Center h="100%">
+            <Stack align="center" gap="md">
+              <Loader size="lg" />
+              <Text size="lg" c="dimmed">
+                Connecting to room...
+              </Text>
+            </Stack>
+          </Center>
+        </Box>
+      )}
     </Stack>
   );
 }
