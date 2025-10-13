@@ -1,14 +1,17 @@
-import type { Dispatch, SetStateAction } from "react";
+import type { ComponentType, Dispatch, SetStateAction } from "react";
 import { useDebouncedCallback } from "@mantine/hooks";
 import {
   ActionIcon,
   Box,
+  Button,
   ColorInput,
   Divider,
   Group,
+  Menu,
   NumberInput,
   ScrollArea,
   Select,
+  SimpleGrid,
   Tooltip,
 } from "@mantine/core";
 import {
@@ -17,6 +20,7 @@ import {
   IconAlignRight,
   IconArrowBackUp,
   IconArrowForwardUp,
+  IconChevronDown,
   IconCircle,
   IconDownload,
   IconEraser,
@@ -27,6 +31,7 @@ import {
   IconPencilX,
   IconPhotoPlus,
   IconPointer,
+  type IconProps,
   IconRectangle,
   IconRulerMeasure,
   IconStackBack,
@@ -39,13 +44,20 @@ import {
   IconTypography,
 } from "@tabler/icons-react";
 import * as Y from "yjs";
-import { toClampedNumber } from "@/util/size.ts";
-import type { CanvasObject, TextAttributes, Tool } from "@/util/types.ts";
+import { formatFromId, toClampedNumber } from "@/util/misc.ts";
+import type {
+  CanvasObject,
+  ShapeType,
+  TextAttributes,
+  Tool,
+} from "@/util/types.ts";
 import type { ObjectLayerHandle } from "@/components/ObjectLayer.tsx";
 
 type ToolbarProps = {
   tool: Tool;
   setTool: (tool: Tool) => void;
+  shapeType: ShapeType;
+  setShapeType: (shapeType: ShapeType) => void;
   penColor: string;
   setPenColor: Dispatch<SetStateAction<string>>;
   lineWidths: Omit<Record<Tool, number>, "select">;
@@ -85,9 +97,17 @@ const colorSwatches = [
   "#fd7e14",
 ];
 
+const shapeIcons = new Map<ShapeType, ComponentType<IconProps>>([
+  ["rectangle", IconRectangle],
+  ["ellipse", IconCircle],
+  ["line", IconLine],
+]);
+
 export default function Toolbar({
   tool,
   setTool,
+  shapeType,
+  setShapeType,
   penColor,
   setPenColor,
   lineWidths,
@@ -119,6 +139,8 @@ export default function Toolbar({
     updateTextAttributes,
     200,
   );
+
+  const ShapeIcon = shapeIcons.get(shapeType)!;
 
   return (
     <Box bd="1px solid #eee" bdrs={8} bg="#fafafa">
@@ -152,7 +174,87 @@ export default function Toolbar({
                 <IconEraser size={18} />
               </ActionIcon>
             </Tooltip>
+            <Tooltip label="Draw shape" openDelay={300}>
+              <ActionIcon
+                variant={tool === "draw-shape" ? "filled" : "default"}
+                onClick={() => setTool("draw-shape")}
+                aria-pressed={tool === "draw-shape"}
+              >
+                <ShapeIcon size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Menu>
+              <Menu.Target>
+                <ActionIcon.GroupSection variant="default" size="md" px={0}>
+                  <Button variant="transparent" px={0}>
+                    <IconChevronDown size={12} />
+                  </Button>
+                </ActionIcon.GroupSection>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <SimpleGrid cols={3} spacing="xs" verticalSpacing="xs">
+                  {Array.from(shapeIcons).map(([name, Icon]) => (
+                    <Tooltip
+                      key={name}
+                      label={formatFromId(name)}
+                      openDelay={300}
+                    >
+                      <ActionIcon
+                        variant={shapeType === name ? "filled" : "default"}
+                        onClick={() => setShapeType(name)}
+                        aria-pressed={shapeType === name}
+                      >
+                        <Icon size={18} />
+                      </ActionIcon>
+                    </Tooltip>
+                  ))}
+                </SimpleGrid>
+              </Menu.Dropdown>
+            </Menu>
           </ActionIcon.Group>
+          <ActionIcon.Group>
+            <Tooltip label="Insert image" openDelay={300}>
+              <ActionIcon component="label" variant="default">
+                <IconPhotoPlus size={18} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const file = e.currentTarget.files?.[0];
+                    if (!file) {
+                      return;
+                    }
+                    objectLayerHandle?.addImage(file);
+                    setTool("select");
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Insert equation" openDelay={300}>
+              <ActionIcon variant="default" onClick={insertEquation}>
+                <IconMathFunction size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Insert text" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                onClick={() => {
+                  objectLayerHandle?.addText("Double-click to edit", {
+                    fontFamily,
+                    fontSize,
+                    color: textColor,
+                    align: textAlign,
+                  });
+                  setTool("select");
+                }}
+              >
+                <IconTypography size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </ActionIcon.Group>
+          <Divider orientation="vertical" />
           <ActionIcon.Group>
             <Tooltip label="Undo" openDelay={300}>
               <ActionIcon
@@ -232,78 +334,6 @@ export default function Toolbar({
                 onClick={() => objectLayerHandle?.sendToBack()}
               >
                 <IconStackBack size={18} />
-              </ActionIcon>
-            </Tooltip>
-          </ActionIcon.Group>
-          <Divider orientation="vertical" />
-          <ActionIcon.Group>
-            <Tooltip label="Rectangle" openDelay={300}>
-              <ActionIcon
-                variant={tool === "rectangle" ? "filled" : "default"}
-                onClick={() => setTool("rectangle")}
-                aria-pressed={tool === "rectangle"}
-              >
-                <IconRectangle size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Ellipse" openDelay={300}>
-              <ActionIcon
-                variant={tool === "ellipse" ? "filled" : "default"}
-                onClick={() => setTool("ellipse")}
-                aria-pressed={tool === "ellipse"}
-              >
-                <IconCircle size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Line" openDelay={300}>
-              <ActionIcon
-                variant={tool === "line" ? "filled" : "default"}
-                onClick={() => setTool("line")}
-                aria-pressed={tool === "line"}
-              >
-                <IconLine size={18} />
-              </ActionIcon>
-            </Tooltip>
-          </ActionIcon.Group>
-          <ActionIcon.Group>
-            <Tooltip label="Insert image" openDelay={300}>
-              <ActionIcon component="label" variant="default">
-                <IconPhotoPlus size={18} />
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={(e) => {
-                    const file = e.currentTarget.files?.[0];
-                    if (!file) {
-                      return;
-                    }
-                    objectLayerHandle?.addImage(file);
-                    setTool("select");
-                    e.currentTarget.value = "";
-                  }}
-                />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Insert equation" openDelay={300}>
-              <ActionIcon variant="default" onClick={insertEquation}>
-                <IconMathFunction size={18} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="Insert text" openDelay={300}>
-              <ActionIcon
-                variant="default"
-                onClick={() => {
-                  objectLayerHandle?.addText("Double-click to edit", {
-                    fontFamily,
-                    fontSize,
-                    color: textColor,
-                    align: textAlign,
-                  });
-                  setTool("select");
-                }}
-              >
-                <IconTypography size={18} />
               </ActionIcon>
             </Tooltip>
           </ActionIcon.Group>

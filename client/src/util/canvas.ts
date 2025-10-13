@@ -29,7 +29,8 @@ export function drawStroke(ctx: CanvasRenderingContext2D, stroke: StrokeEvent) {
   ctx.lineWidth = stroke.lineWidth;
 
   if (stroke.startPoint && stroke.endPoint) {
-    switch (stroke.tool) {
+    const shapeType = stroke.shapeType;
+    switch (shapeType) {
       case "rectangle":
         drawRectangle(ctx, stroke.startPoint, stroke.endPoint);
         break;

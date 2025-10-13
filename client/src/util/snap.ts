@@ -1,7 +1,7 @@
-import type { Point, Tool } from "@/util/types.ts";
+import type { Point, ShapeType } from "@/util/types.ts";
 
-export default function snap(tool: Tool, start: Point, end: Point) {
-  switch (tool) {
+export default function snap(shape: ShapeType, start: Point, end: Point) {
+  switch (shape) {
     case "rectangle":
       return snapRectangle(start, end);
     case "ellipse":

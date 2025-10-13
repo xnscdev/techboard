@@ -73,12 +73,15 @@ export default function Room() {
   const shapeStartRef = useRef<Point | null>(null);
   const shapeEndRef = useRef<Point | null>(null);
   const [tool, setTool] = useState<Tool>("select");
+  const [shapeType, setShapeType] = useState<"rectangle" | "ellipse" | "line">(
+    "rectangle",
+  );
   const [shiftKey, setShiftKey] = useState(false);
 
   const [penColor, setPenColor] = useState<string>("#000000");
   const [lineWidths, setLineWidths] = useState<
     Omit<Record<Tool, number>, "select">
-  >({ pen: 2, eraser: 36, rectangle: 2, ellipse: 2, line: 2 });
+  >({ pen: 2, eraser: 36, "draw-shape": 2 });
   const [fontFamily, setFontFamily] = useState<string>("Arial");
   const [fontSize, setFontSize] = useState<number>(20);
   const [textColor, setTextColor] = useState<string>("#000000");
@@ -225,7 +228,10 @@ export default function Room() {
         undoRef.current?.undo();
       }
 
-      if ((e.ctrlKey || e.metaKey) && ((e.key === "z" && e.shiftKey) || e.key === "y")) {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        ((e.key === "z" && e.shiftKey) || e.key === "y")
+      ) {
         e.preventDefault();
         undoRef.current?.redo();
       }
@@ -298,7 +304,7 @@ export default function Room() {
     canvasRef.current!.setPointerCapture(e.pointerId);
     drawingRef.current = true;
     const pos = getPos(e.nativeEvent);
-    if (tool === "rectangle" || tool === "ellipse" || tool === "line") {
+    if (tool === "draw-shape") {
       shapeStartRef.current = pos;
     } else {
       lastPosRef.current = pos;
@@ -310,11 +316,11 @@ export default function Room() {
       return;
     }
     const curr = getPos(e.nativeEvent);
-    if (tool === "rectangle" || tool === "ellipse" || tool === "line") {
+    if (tool === "draw-shape") {
       if (shapeStartRef.current && previewCtxRef.current) {
         let drawEnd = curr;
         if (shiftKey) {
-          drawEnd = snap(tool, shapeStartRef.current, curr);
+          drawEnd = snap(shapeType, shapeStartRef.current, curr);
         }
         shapeEndRef.current = drawEnd;
         clearCanvas(previewCtxRef.current, previewCanvasRef.current!);
@@ -323,7 +329,7 @@ export default function Room() {
         previewCtxRef.current.lineWidth = lineWidths[tool];
         previewCtxRef.current.lineCap = "round";
         previewCtxRef.current.lineJoin = "round";
-        switch (tool) {
+        switch (shapeType) {
           case "rectangle":
             drawRectangle(
               previewCtxRef.current,
@@ -360,7 +366,7 @@ export default function Room() {
       return;
     }
     drawingRef.current = false;
-    if (tool === "rectangle" || tool === "ellipse" || tool === "line") {
+    if (tool === "draw-shape") {
       if (
         ctxRef.current &&
         shapeStartRef.current &&
@@ -375,6 +381,7 @@ export default function Room() {
           color: penColor,
           startPoint: shapeStartRef.current,
           endPoint: shapeEndRef.current,
+          shapeType,
         };
         docRef.current.transact(
           () => strokesRef.current?.push([stroke]),
@@ -480,6 +487,8 @@ export default function Room() {
       <Toolbar
         tool={tool}
         setTool={setTool}
+        shapeType={shapeType}
+        setShapeType={setShapeType}
         penColor={penColor}
         setPenColor={setPenColor}
         lineWidths={lineWidths}

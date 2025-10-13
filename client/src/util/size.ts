@@ -1,5 +1,3 @@
-import { clamp } from "@mantine/hooks";
-
 export function scaleSize(
   width: number,
   height: number,
@@ -38,19 +36,4 @@ export function scaleResize(width: number, height: number, min?: number) {
     height = Math.max(min, height);
   }
   return { width, height };
-}
-
-export function toClampedNumber(
-  value: string | number,
-  min: number,
-  max: number,
-) {
-  if (typeof value === "string") {
-    const n = Number(value);
-    if (isNaN(n)) {
-      return min;
-    }
-    return clamp(n, min, max);
-  }
-  return clamp(value, min, max);
 }

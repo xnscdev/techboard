@@ -2,13 +2,9 @@ export type Point = { x: number; y: number };
 
 export type Segment = { from: Point; to: Point };
 
-export type Tool =
-  | "select"
-  | "pen"
-  | "eraser"
-  | "rectangle"
-  | "ellipse"
-  | "line";
+export type Tool = "select" | "pen" | "eraser" | "draw-shape";
+
+export type ShapeType = "rectangle" | "ellipse" | "line";
 
 export type StrokeEvent = {
   segments: Segment[];
@@ -17,6 +13,7 @@ export type StrokeEvent = {
   color?: string;
   startPoint?: Point;
   endPoint?: Point;
+  shapeType?: ShapeType;
 };
 
 export type TextAttributes = {
