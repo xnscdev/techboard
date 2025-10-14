@@ -8,10 +8,20 @@ export type WS = {
   onUpdateDoc: (fn: (update: Uint8Array) => void) => void;
   sendUpdateDoc: (update: Uint8Array) => void;
   onUserCount: (fn: (count: number) => void) => void;
+  onDisconnect: (fn: () => void) => void;
+  onReconnect: (fn: () => void) => void;
+  onConnectError: (fn: (error: Error) => void) => void;
 };
 
 export function createWS(baseUrl: string): WS {
-  const socket = io(baseUrl, { transports: ["websocket"] });
+  const socket = io(baseUrl, {
+    transports: ["websocket"],
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: Infinity,
+    timeout: 20000,
+  });
   return {
     socket,
     createRoom: () =>
@@ -32,5 +42,8 @@ export function createWS(baseUrl: string): WS {
       ),
     sendUpdateDoc: (update) => socket.emit("updateDoc", update),
     onUserCount: (fn) => socket.on("userCount", fn),
+    onDisconnect: (fn) => socket.on("disconnect", fn),
+    onReconnect: (fn) => socket.on("reconnect", fn),
+    onConnectError: (fn) => socket.on("connect_error", fn),
   };
 }

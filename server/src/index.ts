@@ -9,6 +9,9 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: { origin: "*" },
+  pingTimeout: 30000,
+  pingInterval: 15000,
+  connectTimeout: 45000,
 });
 
 const rooms = new Map<string, RoomState>();
@@ -35,6 +38,13 @@ io.on("connection", (socket) => {
       console.log(`joinRoom: ${socket.id}: no such room ${roomId}`);
       return;
     }
+
+    if (joinedRoom && joinedRoom.id === room.id) {
+      console.log(
+        `joinRoom: ${socket.id}: rejoining room ${roomId} after reconnection`,
+      );
+    }
+
     joinedRoom = room;
     room.clients.add(socket.id);
     socket.join(room.id);
