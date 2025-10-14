@@ -7,7 +7,6 @@ import {
 } from "react";
 import {
   ActionIcon,
-  Badge,
   Box,
   Button,
   Center,
@@ -111,9 +110,6 @@ export default function Room() {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [userCount, setUserCount] = useState(0);
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connected" | "disconnected" | "reconnecting"
-  >("connected");
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -187,15 +183,12 @@ export default function Room() {
 
     ws.onDisconnect(() => {
       console.log("Disconnected from server");
-      setConnectionStatus("disconnected");
     });
 
     ws.onReconnect(() => {
       console.log("Reconnected to server, rejoining room");
-      setConnectionStatus("reconnecting");
       ws.joinRoom(roomId).then((ok) => {
         if (ok) {
-          setConnectionStatus("connected");
           console.log("Successfully rejoined room after reconnection");
         } else {
           console.error("Failed to rejoin room after reconnection");
@@ -206,7 +199,6 @@ export default function Room() {
 
     ws.onConnectError((error) => {
       console.error("Connection error:", error);
-      setConnectionStatus("disconnected");
     });
 
     ws.joinRoom(roomId).then((ok) => {
@@ -215,7 +207,6 @@ export default function Room() {
         return;
       }
       setWsReady(true);
-      setConnectionStatus("connected");
     });
 
     return () => {
@@ -338,11 +329,7 @@ export default function Room() {
   };
 
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (
-      !ctxRef.current ||
-      tool === "select" ||
-      connectionStatus !== "connected"
-    ) {
+    if (!ctxRef.current || tool === "select") {
       return;
     }
     canvasRef.current!.setPointerCapture(e.pointerId);
@@ -557,21 +544,6 @@ export default function Room() {
           <Text size="sm" c="dimmed">
             {userCount} user{userCount === 1 ? "" : "s"} connected
           </Text>
-          {connectionStatus === "connected" && (
-            <Badge color="green" variant="light" size="sm">
-              Connected
-            </Badge>
-          )}
-          {connectionStatus === "disconnected" && (
-            <Badge color="red" variant="filled" size="sm">
-              Disconnected
-            </Badge>
-          )}
-          {connectionStatus === "reconnecting" && (
-            <Badge color="yellow" variant="filled" size="sm">
-              Reconnecting
-            </Badge>
-          )}
         </Group>
         <Button variant="light" onClick={() => navigate("/")}>
           Leave
