@@ -19,6 +19,7 @@ import {
   IconArrowForwardUp,
   IconCircle,
   IconClipboard,
+  IconClock,
   IconCopy,
   IconCut,
   IconDownload,
@@ -77,6 +78,7 @@ type ToolbarProps = {
   canUndo: boolean;
   canRedo: boolean;
   insertEquation: () => void;
+  insertTimer: () => void;
   onCopy: () => void;
   onCut: () => void;
   onPaste: () => void;
@@ -153,6 +155,7 @@ export default function Toolbar({
   canUndo,
   canRedo,
   insertEquation,
+  insertTimer,
   onCopy,
   onCut,
   onPaste,
@@ -243,6 +246,11 @@ export default function Toolbar({
             <Tooltip label="Insert equation" openDelay={300}>
               <ActionIcon variant="default" onClick={insertEquation}>
                 <IconMathFunction size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Insert timer" openDelay={300}>
+              <ActionIcon variant="default" onClick={insertTimer}>
+                <IconClock size={18} />
               </ActionIcon>
             </Tooltip>
             <Tooltip label="Insert text" openDelay={300}>

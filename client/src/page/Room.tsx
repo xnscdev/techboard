@@ -51,6 +51,7 @@ import ObjectLayer, {
   type ObjectLayerHandle,
 } from "@/components/ObjectLayer.tsx";
 import EditEquationModal from "@/components/EditEquationModal.tsx";
+import EditTimerModal from "@/components/EditTimerModal.tsx";
 import Toolbar from "@/components/Toolbar.tsx";
 
 const wsUrl: string = import.meta.env.VITE_WS_URL ?? "http://localhost:5174";
@@ -106,6 +107,11 @@ export default function Room() {
     useDisclosure(false);
   const [latexInitial, setLatexInitial] = useState<string>("");
   const [editingLatexId, setEditingLatexId] = useState<string | null>(null);
+
+  const [timerModalOpened, { open: timerModalOpen, close: timerModalClose }] =
+    useDisclosure(false);
+  const [editingTimerId, setEditingTimerId] = useState<string | null>(null);
+  const [timerInitialMs, setTimerInitialMs] = useState(60000);
 
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -513,6 +519,11 @@ export default function Room() {
     latexModalOpen();
   };
 
+  const insertTimer = () => {
+    objectLayerRef.current?.addTimer();
+    setTool("select");
+  };
+
   const clearDrawings = () => {
     docRef.current?.transact(() => {
       strokesRef.current?.delete(0, strokesRef.current?.length ?? 0);
@@ -596,6 +607,7 @@ export default function Room() {
         canUndo={canUndo}
         canRedo={canRedo}
         insertEquation={insertEquation}
+        insertTimer={insertTimer}
         onCopy={() => objectLayerRef.current?.copySelected()}
         onCut={() => objectLayerRef.current?.cutSelected()}
         onPaste={() =>
@@ -684,6 +696,11 @@ export default function Room() {
                 setLatexInitial(text ?? "");
                 latexModalOpen();
               }}
+              onRequestEditTimer={(id, initialMs) => {
+                setEditingTimerId(id);
+                setTimerInitialMs(initialMs);
+                timerModalOpen();
+              }}
               getViewportOffset={getViewportOffset}
             />
           )}
@@ -722,6 +739,17 @@ export default function Room() {
         initial={latexInitial}
         title={editingLatexId ? "Edit LaTeX Equation" : "Insert LaTeX Equation"}
         confirmLabel={editingLatexId ? "Update" : "Insert"}
+      />
+      <EditTimerModal
+        opened={timerModalOpened}
+        onCancel={timerModalClose}
+        onConfirm={(totalMs) => {
+          if (editingTimerId) {
+            objectLayerRef.current?.setTimerConfig(editingTimerId, totalMs);
+          }
+          timerModalClose();
+        }}
+        initialMs={timerInitialMs}
       />
       {!wsReady && (
         <Box

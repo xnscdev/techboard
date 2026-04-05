@@ -16,12 +16,14 @@ import type {
   LatexObject,
   TextAttributes,
   TextObject,
+  TimerObject,
 } from "@/util/types.ts";
 import { latexToSvgDataUrl } from "@/util/latex.ts";
 import { OBJECT_MIME_TYPE } from "@/util/paste.ts";
 import { scaleImage, scaleResize } from "@/util/size.ts";
 import ImageWrapper from "@/components/ImageWrapper.tsx";
 import TextWrapper from "@/components/TextWrapper.tsx";
+import TimerWrapper from "@/components/TimerWrapper.tsx";
 import getPlacer from "@/util/placer.ts";
 
 export type ObjectLayerHandle = {
@@ -30,6 +32,8 @@ export type ObjectLayerHandle = {
   updateLatex: (id: string, text: string) => void;
   addText: (text: string, attr: TextAttributes) => void;
   updateText: (id: string, attr: Partial<TextAttributes>) => void;
+  addTimer: () => void;
+  setTimerConfig: (id: string, initialMs: number) => void;
   clearSelection: () => void;
   copySelected: () => void;
   cutSelected: () => void;
@@ -54,6 +58,7 @@ type ObjectProps = {
   onSelectionChange?: (obj: CanvasObject | null) => void;
   onTextAttributesChange?: (attr: TextAttributes) => void;
   onRequestEditLatex?: (id: string, text: string) => void;
+  onRequestEditTimer?: (id: string, initialMs: number) => void;
   getViewportOffset?: () => { x: number; y: number };
 };
 
@@ -90,6 +95,7 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     order,
     onSelectionChange,
     onRequestEditLatex,
+    onRequestEditTimer,
     getViewportOffset,
   },
   ref,
@@ -293,6 +299,43 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
       }
       doc.transact(() => setObjectToMap(m, attr), "local");
     },
+    addTimer() {
+      const id = `timer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const { x, y } = getPlacementPosition();
+      const obj: Omit<TimerObject, "id"> = {
+        type: "timer",
+        x,
+        y,
+        width: 220,
+        height: 100,
+        rotation: 0,
+        endTime: null,
+        remainingMs: 60000,
+        initialMs: 60000,
+        running: false,
+      };
+      doc.transact(() => {
+        const m = new Y.Map<unknown>();
+        setObjectToMap(m, obj);
+        objects.set(id, m);
+        order.push([id]);
+      }, "local");
+      setSelectedId(id);
+    },
+    setTimerConfig(id: string, initialMs: number) {
+      const m = objects.get(id);
+      if (!m) {
+        return;
+      }
+      doc.transact(() => {
+        setObjectToMap(m, {
+          initialMs,
+          remainingMs: initialMs,
+          running: false,
+          endTime: null,
+        });
+      }, "local");
+    },
     clearSelection() {
       setSelectedId(null);
     },
@@ -443,6 +486,9 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     if (obj.type === "latex") {
       setSelectedId(obj.id);
       onRequestEditLatex?.(obj.id, obj.text || "");
+    } else if (obj.type === "timer") {
+      setSelectedId(obj.id);
+      onRequestEditTimer?.(obj.id, obj.initialMs);
     }
   };
 
@@ -513,6 +559,29 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
                   updateObject(it.id, { text } as Partial<
                     Omit<TextObject, "id">
                   >)
+                }
+              />
+            );
+          } else if (it.type === "timer") {
+            return (
+              <TimerWrapper
+                key={it.id}
+                obj={it}
+                active={active}
+                nodeRef={(node) => {
+                  if (node) {
+                    nodeRefs.current[it.id] = node;
+                  } else {
+                    delete nodeRefs.current[it.id];
+                  }
+                }}
+                select={() => setSelectedId(it.id)}
+                edit={() => editObject(it)}
+                update={
+                  updateObject as (
+                    id: string,
+                    fields: Partial<Omit<TimerObject, "id">>,
+                  ) => void
                 }
               />
             );

@@ -64,4 +64,18 @@ export type TextObject = {
   rotation: number;
 } & TextAttributes;
 
-export type CanvasObject = ImageObject | LatexObject | TextObject;
+export type TimerObject = {
+  id: string;
+  type: "timer";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  endTime: number | null;
+  remainingMs: number;
+  initialMs: number;
+  running: boolean;
+};
+
+export type CanvasObject = ImageObject | LatexObject | TextObject | TimerObject;
