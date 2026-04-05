@@ -18,6 +18,9 @@ import {
   IconArrowBackUp,
   IconArrowForwardUp,
   IconCircle,
+  IconClipboard,
+  IconCopy,
+  IconCut,
   IconDownload,
   IconEraser,
   IconInputX,
@@ -74,6 +77,9 @@ type ToolbarProps = {
   canUndo: boolean;
   canRedo: boolean;
   insertEquation: () => void;
+  onCopy: () => void;
+  onCut: () => void;
+  onPaste: () => void;
   clearDrawings: () => void;
   handleDownload: () => void;
 };
@@ -147,6 +153,9 @@ export default function Toolbar({
   canUndo,
   canRedo,
   insertEquation,
+  onCopy,
+  onCut,
+  onPaste,
   clearDrawings,
   handleDownload,
 }: ToolbarProps) {
@@ -271,6 +280,31 @@ export default function Toolbar({
                 onClick={() => undoManager?.redo()}
               >
                 <IconArrowForwardUp size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </ActionIcon.Group>
+          <ActionIcon.Group>
+            <Tooltip label="Copy" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                disabled={!selectedObject}
+                onClick={onCopy}
+              >
+                <IconCopy size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Cut" openDelay={300}>
+              <ActionIcon
+                variant="default"
+                disabled={!selectedObject}
+                onClick={onCut}
+              >
+                <IconCut size={18} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label="Paste" openDelay={300}>
+              <ActionIcon variant="default" onClick={onPaste}>
+                <IconClipboard size={18} />
               </ActionIcon>
             </Tooltip>
           </ActionIcon.Group>

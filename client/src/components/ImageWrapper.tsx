@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Image } from "react-konva";
 import type Konva from "konva";
 import type { ImageObject, LatexObject } from "@/util/types.ts";
@@ -22,14 +23,18 @@ export default function ImageWrapper({
   edit,
   update,
 }: ImageWrapperProps) {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const img = new window.Image();
+    img.onload = () => setImage(img);
+    img.src = obj.src;
+  }, [obj.src]);
+
   return (
     <Image
       ref={nodeRef}
-      image={(function () {
-        const img = new window.Image();
-        img.src = obj.src;
-        return img;
-      })()}
+      image={image ?? undefined}
       x={obj.x}
       y={obj.y}
       width={obj.width}

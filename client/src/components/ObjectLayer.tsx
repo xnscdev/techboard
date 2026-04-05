@@ -18,6 +18,7 @@ import type {
   TextObject,
 } from "@/util/types.ts";
 import { latexToSvgDataUrl } from "@/util/latex.ts";
+import { OBJECT_MIME_TYPE } from "@/util/paste.ts";
 import { scaleImage, scaleResize } from "@/util/size.ts";
 import ImageWrapper from "@/components/ImageWrapper.tsx";
 import TextWrapper from "@/components/TextWrapper.tsx";
@@ -30,6 +31,9 @@ export type ObjectLayerHandle = {
   addText: (text: string, attr: TextAttributes) => void;
   updateText: (id: string, attr: Partial<TextAttributes>) => void;
   clearSelection: () => void;
+  copySelected: () => void;
+  cutSelected: () => void;
+  pasteObject: (data: Omit<CanvasObject, "id">) => void;
   bringForward: () => void;
   sendBackward: () => void;
   bringToFront: () => void;
@@ -246,13 +250,15 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
         encoding: "base64",
       });
       const el = await loadHTMLImage(url);
-      const { width, height } = scaleImage(el, 20);
+      const currentHeight = (obj as LatexObject).height;
+      const aspectRatio = el.naturalWidth / el.naturalHeight;
+      const newWidth = Math.max(1, Math.round(currentHeight * aspectRatio));
       doc.transact(() => {
         setObjectToMap(m, {
           text,
           src: url,
-          width,
-          height,
+          width: newWidth,
+          height: currentHeight,
         });
       }, "local");
     },
@@ -289,6 +295,46 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
     },
     clearSelection() {
       setSelectedId(null);
+    },
+    copySelected() {
+      if (!selectedObject) {
+        return;
+      }
+      const { id: _, ...rest } = selectedObject;
+      const json = JSON.stringify(rest);
+      const blob = new Blob([json], { type: OBJECT_MIME_TYPE });
+      navigator.clipboard
+        .write([new ClipboardItem({ [OBJECT_MIME_TYPE]: blob })])
+        .catch(() => {});
+    },
+    cutSelected() {
+      if (!selectedObject || !selectedId) {
+        return;
+      }
+      const { id: _, ...rest } = selectedObject;
+      const json = JSON.stringify(rest);
+      const blob = new Blob([json], { type: OBJECT_MIME_TYPE });
+      navigator.clipboard
+        .write([new ClipboardItem({ [OBJECT_MIME_TYPE]: blob })])
+        .catch(() => {});
+      doc.transact(() => {
+        objects.delete(selectedId);
+        const idx = order.toArray().indexOf(selectedId);
+        order.delete(idx, 1);
+      }, "local");
+      setSelectedId(null);
+    },
+    pasteObject(data: Omit<CanvasObject, "id">) {
+      const id = `${data.type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const { x, y } = getPlacementPosition();
+      const obj = { ...data, x, y };
+      doc.transact(() => {
+        const m = new Y.Map<unknown>();
+        setObjectToMap(m, obj);
+        objects.set(id, m);
+        order.push([id]);
+      }, "local");
+      setSelectedId(id);
     },
     bringForward() {
       if (!selectedId) {

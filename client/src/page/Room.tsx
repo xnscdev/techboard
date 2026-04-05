@@ -24,7 +24,7 @@ import { YArrayEvent } from "yjs";
 import { useDebouncedCallback, useDisclosure } from "@mantine/hooks";
 import { createWS, type WS } from "@/util/ws.ts";
 import snap from "@/util/snap.ts";
-import handlePaste from "@/util/paste.ts";
+import { handleClipboardEvent, handleClipboardRead } from "@/util/paste.ts";
 import type {
   CanvasObject,
   Point,
@@ -266,6 +266,29 @@ export default function Room() {
         e.preventDefault();
         undoRef.current?.redo();
       }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        objectLayerRef.current?.copySelected();
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "x") {
+        objectLayerRef.current?.cutSelected();
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        e.preventDefault();
+        handleClipboardRead(
+          (data) => {
+            objectLayerRef.current?.pasteObject(data);
+            setTool("select");
+          },
+          (file) => {
+            objectLayerRef.current?.addImage(file);
+            setTool("select");
+          },
+          pasteText,
+        );
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -287,7 +310,8 @@ export default function Room() {
       objectLayerRef.current?.addImage(file);
       setTool("select");
     };
-    const handler = (e: ClipboardEvent) => handlePaste(e, addImage, pasteText);
+    const handler = (e: ClipboardEvent) =>
+      handleClipboardEvent(e, addImage, pasteText);
     document.addEventListener("paste", handler);
     return () => document.removeEventListener("paste", handler);
   });
@@ -572,6 +596,21 @@ export default function Room() {
         canUndo={canUndo}
         canRedo={canRedo}
         insertEquation={insertEquation}
+        onCopy={() => objectLayerRef.current?.copySelected()}
+        onCut={() => objectLayerRef.current?.cutSelected()}
+        onPaste={() =>
+          handleClipboardRead(
+            (data) => {
+              objectLayerRef.current?.pasteObject(data);
+              setTool("select");
+            },
+            (file) => {
+              objectLayerRef.current?.addImage(file);
+              setTool("select");
+            },
+            pasteText,
+          )
+        }
         clearDrawings={clearDrawings}
         handleDownload={handleDownload}
       />
