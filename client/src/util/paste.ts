@@ -2,6 +2,16 @@ import type { CanvasObject } from "@/util/types.ts";
 
 export const OBJECT_MIME_TYPE = "web application/x-techboard-object+json";
 
+export function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return (
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.isContentEditable ||
+    target.closest("input, textarea, [contenteditable='true']") !== null
+  );
+}
+
 export async function handleClipboardEvent(
   e: ClipboardEvent,
   addImage: (file: File) => void,

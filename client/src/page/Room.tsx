@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   ActionIcon,
+  Badge,
   Box,
   Button,
   Center,
@@ -24,7 +25,11 @@ import { YArrayEvent } from "yjs";
 import { useDebouncedCallback, useDisclosure } from "@mantine/hooks";
 import { createWS, type WS } from "@/util/ws.ts";
 import snap from "@/util/snap.ts";
-import { handleClipboardEvent, handleClipboardRead } from "@/util/paste.ts";
+import {
+  handleClipboardEvent,
+  handleClipboardRead,
+  isEditableTarget,
+} from "@/util/paste.ts";
 import type {
   CanvasObject,
   Point,
@@ -116,6 +121,9 @@ export default function Room() {
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [userCount, setUserCount] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connected" | "disconnected" | "reconnecting"
+  >("connected");
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -189,13 +197,16 @@ export default function Room() {
 
     ws.onDisconnect(() => {
       console.log("Disconnected from server");
+      setConnectionStatus("disconnected");
     });
 
     ws.onReconnect(() => {
       console.log("Reconnected to server, rejoining room");
+      setConnectionStatus("reconnecting");
       ws.joinRoom(roomId).then((ok) => {
         if (ok) {
           console.log("Successfully rejoined room after reconnection");
+          setConnectionStatus("connected");
         } else {
           console.error("Failed to rejoin room after reconnection");
           navigate("/");
@@ -205,6 +216,7 @@ export default function Room() {
 
     ws.onConnectError((error) => {
       console.error("Connection error:", error);
+      setConnectionStatus("disconnected");
     });
 
     ws.joinRoom(roomId).then((ok) => {
@@ -212,6 +224,7 @@ export default function Room() {
         navigate("/");
         return;
       }
+      setConnectionStatus("connected");
       setWsReady(true);
     });
 
@@ -260,40 +273,42 @@ export default function Room() {
         setShiftKey(true);
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undoRef.current?.undo();
-      }
+      if (!isEditableTarget(e.target)) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+          e.preventDefault();
+          undoRef.current?.undo();
+        }
 
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        ((e.key === "z" && e.shiftKey) || e.key === "y")
-      ) {
-        e.preventDefault();
-        undoRef.current?.redo();
-      }
+        if (
+          (e.ctrlKey || e.metaKey) &&
+          ((e.key === "z" && e.shiftKey) || e.key === "y")
+        ) {
+          e.preventDefault();
+          undoRef.current?.redo();
+        }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-        objectLayerRef.current?.copySelected();
-      }
+        if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+          objectLayerRef.current?.copySelected();
+        }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "x") {
-        objectLayerRef.current?.cutSelected();
-      }
+        if ((e.ctrlKey || e.metaKey) && e.key === "x") {
+          objectLayerRef.current?.cutSelected();
+        }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
-        e.preventDefault();
-        handleClipboardRead(
-          (data) => {
-            objectLayerRef.current?.pasteObject(data);
-            setTool("select");
-          },
-          (file) => {
-            objectLayerRef.current?.addImage(file);
-            setTool("select");
-          },
-          pasteText,
-        );
+        if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+          e.preventDefault();
+          handleClipboardRead(
+            (data) => {
+              objectLayerRef.current?.pasteObject(data);
+              setTool("select");
+            },
+            (file) => {
+              objectLayerRef.current?.addImage(file);
+              setTool("select");
+            },
+            pasteText,
+          );
+        }
       }
     };
 
@@ -359,7 +374,11 @@ export default function Room() {
   };
 
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (!ctxRef.current || tool === "select") {
+    if (
+      !ctxRef.current ||
+      tool === "select" ||
+      connectionStatus !== "connected"
+    ) {
       return;
     }
     canvasRef.current!.setPointerCapture(e.pointerId);
@@ -579,6 +598,21 @@ export default function Room() {
           <Text size="sm" c="dimmed">
             {userCount} user{userCount === 1 ? "" : "s"} connected
           </Text>
+          {connectionStatus === "connected" && (
+            <Badge color="green" variant="light" size="sm">
+              Connected
+            </Badge>
+          )}
+          {connectionStatus === "disconnected" && (
+            <Badge color="red" variant="filled" size="sm">
+              Disconnected
+            </Badge>
+          )}
+          {connectionStatus === "reconnecting" && (
+            <Badge color="yellow" variant="filled" size="sm">
+              Reconnecting
+            </Badge>
+          )}
         </Group>
         <Button variant="light" onClick={() => navigate("/")}>
           Leave

@@ -28,9 +28,7 @@ async function initMathJax() {
       import("mathjax-full/js/input/tex/mathtools/MathtoolsConfiguration.js"),
       import("mathjax-full/js/input/tex/mhchem/MhchemConfiguration.js"),
       import("mathjax-full/js/input/tex/physics/PhysicsConfiguration.js"),
-      import(
-        "mathjax-full/js/input/tex/noundefined/NoUndefinedConfiguration.js"
-      ),
+      import("mathjax-full/js/input/tex/noundefined/NoUndefinedConfiguration.js"),
     ]);
     const adaptor = liteAdaptor();
     RegisterHTMLHandler(adaptor);

@@ -19,7 +19,7 @@ import type {
   TimerObject,
 } from "@/util/types.ts";
 import { latexToSvgDataUrl } from "@/util/latex.ts";
-import { OBJECT_MIME_TYPE } from "@/util/paste.ts";
+import { isEditableTarget, OBJECT_MIME_TYPE } from "@/util/paste.ts";
 import { scaleImage, scaleResize } from "@/util/size.ts";
 import ImageWrapper from "@/components/ImageWrapper.tsx";
 import TextWrapper from "@/components/TextWrapper.tsx";
@@ -134,7 +134,12 @@ export default forwardRef<ObjectLayerHandle, ObjectProps>(function ObjectLayer(
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Backspace" && selectedId && !isEditingText) {
+      if (
+        e.key === "Backspace" &&
+        selectedId &&
+        !isEditingText &&
+        !isEditableTarget(e.target)
+      ) {
         doc.transact(() => {
           objects.delete(selectedId);
           const idx = order.toArray().indexOf(selectedId);

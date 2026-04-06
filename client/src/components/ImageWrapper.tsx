@@ -26,9 +26,18 @@ export default function ImageWrapper({
   const [image, setImage] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const img = new window.Image();
-    img.onload = () => setImage(img);
+    img.onload = () => {
+      if (!cancelled) setImage(img);
+    };
     img.src = obj.src;
+    if (img.complete && img.naturalWidth > 0) {
+      setImage(img);
+    }
+    return () => {
+      cancelled = true;
+    };
   }, [obj.src]);
 
   return (
